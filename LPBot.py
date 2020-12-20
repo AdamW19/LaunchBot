@@ -9,7 +9,7 @@ import asyncio
 
 print("Initializing...")
 
-EXTENSIONS = ["cogs.log"]
+EXTENSIONS = ["cogs.logs"]
 
 class LPBot(commands.Bot):
     def __init__(self, extensions):
