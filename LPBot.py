@@ -11,6 +11,7 @@ print("Initializing...")
 
 EXTENSIONS = ["cogs.logs"]
 
+
 class LPBot(commands.Bot):
     def __init__(self, extensions):
         intents = discord.Intents.default()
