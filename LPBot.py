@@ -6,10 +6,12 @@ import sys
 from discord.ext import commands
 import os
 import asyncio
+import config
 
 print("Initializing...")
 
-EXTENSIONS = ["cogs.logs"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation"]
+
 
 class LPBot(commands.Bot):
     def __init__(self, extensions):
@@ -20,13 +22,35 @@ class LPBot(commands.Bot):
 
         super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
                          intents=intents)
+        self.session = None
 
         for e in extensions:
             self.load_extension(e)
 
+        self.loop.create_task(self.garbage_collector())
+
+    def __del__(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.close())
+
+    async def close(self):
+        if self.session.closed:
+            await self.session.close()
+
+    async def garbage_collector(self):
+        """Removes all .gif and .png files from gif generation for lobby/rotation info"""
+        await self.wait_until_ready()
+        while not self.is_closed():
+            print("[LPBot] Deleting old files...")
+            for f in os.listdir():
+                if f.endswith(".gif") or f.endswith(".png"):
+                    os.remove(f)
+            print("[LPBot] Deleted all old files")
+            await asyncio.sleep(300)  # removes every 5 min/300 sec
+
     async def on_ready(self):
         print("Connected")
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(headers=config.header)
         await self.get_channel(config.online_logger_id).send("*Connected to Discord*")
 
     async def on_command(self, ctx):
@@ -37,7 +61,7 @@ class LPBot(commands.Bot):
         if isinstance(error, discord.Forbidden) or "missing permissions" in str(error).lower():
             await ctx.send(":x: I do not have permission to send embedded messages in this channel and/or server!  "
                            "Make sure I have the permission `Embed Links`, or I can't function!")
-            await self.get_channel(config.online_logger_id).send(":information_source: A handled error occured "
+            await self.get_channel(config.online_logger_id).send(":information_source: A handled error occurred "
                                                                  "of type `" + type(error).__name__ + "` for message `"
                                                                  + ctx.message.content + "`: `" + str(error) + "`")
         elif (isinstance(error, discord.HTTPException) or isinstance(error, aiohttp.ClientOSError)) \

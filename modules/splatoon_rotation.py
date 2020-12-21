@@ -3,7 +3,7 @@
 from enum import Enum, auto
 from modules.splatnet import Splatnet
 from datetime import datetime
-import modules.linked_list as LinkedList  # I have no clue why this works but "from... import..." doesn't
+from modules.linked_list import LinkedList
 from modules.salmon_emotes import gen_emote_id, SR_TERM_CHAR
 
 IMAGE_BASE = "https://splatoon2.ink/assets/splatnet"
@@ -28,6 +28,7 @@ class SplatoonRotation:
         self.stage_a_image = None
         self.start_time = None
         self.end_time = None
+        self.next_rotation = None
         if mode_type is not ModeTypes.SALMON:
             self.stage_b = None                 # Not populated for salmon run
             self.stage_b_image = None           # Not populated for salmon run
@@ -49,18 +50,22 @@ class SplatoonRotation:
         # find a regular/ranked/league session given the target time
         for rotation in data:
             if rotation["start_time"] <= timestamp < rotation["end_time"]:
-                self.mode = rotation["rule"]["name"]
-                self.stage_a = rotation["stage_a"]["name"]
-                self.stage_a_image = IMAGE_BASE + rotation["stage_a"]["image"]
                 self.start_time = datetime.fromtimestamp(rotation["start_time"], self.target_time.tzname())
                 self.end_time = datetime.fromtimestamp(rotation["end_time"], self.target_time.tzname())
+                self.next_rotation = datetime.fromtimestamp(data[1]["start_time"], self.target_time.tzname())
                 if self.mode_type is not ModeTypes.SALMON:
+                    self.stage_a = rotation["stage_a"]["name"]
+                    self.stage_a_image = IMAGE_BASE + rotation["stage_a"]["image"]
+                    self.mode = rotation["rule"]["name"]
                     self.stage_b = rotation["stage_b"]["name"]
                     self.stage_b_image = IMAGE_BASE + rotation["stage_b"]["image"]
                     return True
                 else:
                     # salmon run is a special exception, requires special processing
+                    self.mode = "Salmon Run"
                     self.weapons_array = LinkedList()
+                    self.stage_a = rotation["stage"]["name"]
+                    self.stage_a_image = IMAGE_BASE + rotation["stage"]["image"]
 
                     # getting weapons, using SR_TERM_CHAR to separate b/t weapon name and weapon id
                     for weapon in rotation["weapons"]:
@@ -74,15 +79,6 @@ class SplatoonRotation:
                                                    SR_TERM_CHAR + "r2")
                         else:
                             self.weapons_array.add(weapon["weapon"]["name"] + SR_TERM_CHAR + weapon["id"])
-                        return True
-
-        if self.mode_type is ModeTypes.SALMON:
-            # if we can't find a detailed rotation, search some more in the other rotations
-            data = await self.splatnet.get_salmon_schedule()
-            for rotation in data:
-                if rotation["start_time"] <= timestamp < rotation["end_time"]:
-                    self.start_time = datetime.fromtimestamp(rotation["start_time"], self.target_time.tzname())
-                    self.end_time = datetime.fromtimestamp(rotation["end_time"], self.target_time.tzname())
                     return True
         return False
 

@@ -6,19 +6,17 @@ import json
 
 
 class AsyncClient:
-    def __init__(self, user_agent: str = "", request_prefix: str = "", request_suffix: str = "", session=None):
-        self.user_agent = user_agent
+    def __init__(self, header: str = "", request_prefix: str = "", request_suffix: str = "", session=None):
+        self.header = header
         self.request_prefix = request_prefix
         self.request_suffix = request_suffix
+        self.connection = session
 
-        if session is None:
-            self.connection = aiohttp.ClientSession()
-        else:
-            self.connection = session
+    def update_connection(self, session):
+        self.connection = session
 
     async def send_request(self, request: str):
-        header = {"User:Agent": self.user_agent}
-        async with self.connection.get(self.request_prefix + request + self.request_suffix, headers=header) as response:
+        async with self.connection.get(self.request_prefix + request + self.request_suffix, headers=self.header) as response:
             if response.status == 200:
                 return await response.text()
             elif response.status == 429:
@@ -30,8 +28,7 @@ class AsyncClient:
                 return '{"error":' + str(response.status) + '}'
 
     async def send_image_request(self, image_url: str, file_path: str):
-        header = {"User:Agent": self.user_agent}
-        async with self.connection.get(image_url, headers=header) as response:
+        async with self.connection.get(image_url, headers=self.header) as response:
             image = await response.read()
             if response.status == 200:
                 with open(file_path, "wb") as f:
