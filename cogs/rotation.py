@@ -11,8 +11,7 @@ from modules.date_difference import DateDifference
 class Rotation(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.splatnet = Splatnet(header=config.header, request_prefix="https://splatoon2.ink/data/",
-                                 request_suffix=".json", session=bot.session)
+        self.splatnet = Splatnet(session=bot.session)
 
     async def on_ready(self):
         self.splatnet.connection = self.bot.session
