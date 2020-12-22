@@ -19,23 +19,23 @@ class Rotation(commands.Cog):
 
     @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["schedule", "schedules", "rotations",
                                                                                  "info", "r"])
-    async def rotation(self, ctx, *args):
+    async def rotation(self, ctx):
         # General help embed
-        embed = discord.Embed(title="Rotation help", color=config.embed_color, description="Alias are "
+        embed = discord.Embed(title="Rotation help", color=config.embed_color, description="Alias for command are "
                                                                                            "`rotation`, `schedule`, "
                                                                                            "`schedules`, `rotations`, "
                                                                                            "`info`, or "
                                                                                            "`r`.")  # PEP 8 is stupid
-        embed.add_field(name="Turf War", value="The subcommand for Turf War is `regular`, `turf`, `t`, or `reg`.")
+        embed.add_field(name="Turf War", value="The subcommand for Turf War is `regular`, `turf`, `t`, `tw`, or `reg`.")
         embed.add_field(name="Ranked", value="The subcommand for Ranked is `ranked`, `rank`, `rk`, `r`, or `rked`.")
         embed.add_field(name="League", value="The subcommand for League is `league`, `l`, `double`, or `quad`.")
         embed.add_field(name="Salmon Run", value="The subcommand for Salmon Run is `salmon`, `sr`, `s`, or `sal`.")
 
-        embed.set_footer(text="You can get next rotations by adding `next` or `n` as an argument.")
+        embed.set_footer(text="You can get the next rotation by adding `next` or `n` as an argument.")
 
         await ctx.send(embed=embed)
 
-    @rotation.group(case_insensitive=True, invoke_without_command=True, aliases=["turf", "t", "reg"])
+    @rotation.group(case_insensitive=True, invoke_without_command=True, aliases=["turf", "t", "reg", "tw"])
     async def regular(self, ctx):
         await self.make_single_rotation(ModeTypes.REGULAR, ctx)
 

@@ -1,6 +1,5 @@
 import discord
 import aiohttp
-import config
 import traceback
 import sys
 from discord.ext import commands
@@ -8,7 +7,7 @@ import os
 import asyncio
 import config
 
-print("Initializing...")
+print("[LPBot] Initializing...")
 
 EXTENSIONS = ["cogs.logs", "cogs.rotation"]
 
@@ -29,6 +28,7 @@ class LPBot(commands.Bot):
 
         self.loop.create_task(self.garbage_collector())
 
+    # Below 2 methods properly close the session once the bot's killed
     def __del__(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.close())
@@ -49,7 +49,7 @@ class LPBot(commands.Bot):
             await asyncio.sleep(300)  # removes every 5 min/300 sec
 
     async def on_ready(self):
-        print("Connected")
+        print("[LPBot] Connected")
         self.session = aiohttp.ClientSession(headers=config.header)
         await self.get_channel(config.online_logger_id).send("*Connected to Discord*")
 
