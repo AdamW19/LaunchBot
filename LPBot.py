@@ -9,7 +9,7 @@ import config
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help"]
 
 
 class LPBot(commands.Bot):
