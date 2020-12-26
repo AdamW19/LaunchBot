@@ -11,8 +11,27 @@ help_embed_fields = {
          },
     "draft_commands":
         {"title": "Draft Commands",
-         "body": "*TBD*"
+         "body": "`l?draft help` - gets more specific help for draft commands.\n"
+                 "\n** You must have the `Launchpoint` role to use these commands. **\n"
+                 "`l?draft [num]` - starts a draft and you're looking for `num` people to play.\n"
          },
+    "profile_commands":
+        {"title": "Profile Commands",
+         "body": "`l?draft help` - gets more specific help for profile commands.\n"
+                 "`l?profile` - gets your profile.\n"
+                 "`l?profile [discord_name|discord_id]` - gets someone else's profile.\n"
+                 "`l?profile [set|delete] [fc]` - adds/deletes your friend code from your profile.\n"
+        },
+    "staff_commands":
+        {
+            "title": "Staff Commands",
+            "body": "** You must have the `Staff` role to use these commands. **\n"
+                    "`l?settings` - more specific help for all admin commands.\n"
+                    "`l?settings maplist [code]` - set new maplist with a nkitten code.\n"
+                    "`l?settings seaspon close` - closes the season\n"
+                    "`l?settings season open` - starts a new season\n"
+                    ""
+        },
     "misc_commands":
         {"title": "Misc. Commands",
          "body": "`l?help` - view the help for LaunchBot\n"
@@ -26,6 +45,7 @@ help_embed_fields = {
                  "**Examples:**\n"
                  "1. `l?schedule regular`\n"
                  "2. `l?rotation salmon next`\n"
+                 "3. `l?draft 7`\n"
          }
 }
 
