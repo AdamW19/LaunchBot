@@ -20,7 +20,7 @@ class Rotation(commands.Cog):
                                                                                  "info", "r"])
     async def rotation(self, ctx):
         # General help embed
-        embed = discord.Embed(title="Rotation help", color=config.embed_color, description="Alias for command are "
+        embed = discord.Embed(title="Rotation Help", color=config.embed_color, description="Alias for command are "
                                                                                            "`rotation`, `schedule`, "
                                                                                            "`schedules`, `rotations`, "
                                                                                            "`info`, or "
@@ -70,7 +70,7 @@ class Rotation(commands.Cog):
         channel_id = ctx.channel.id
         time = datetime.now()
 
-        self.splatnet.update_connection(self.bot.session)
+        self.splatnet.update_connection(self.bot.session)  # It's really dumb but sometimes on_ready doesn't run...
 
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         success = await rotation.populate_data()
@@ -92,7 +92,7 @@ class Rotation(commands.Cog):
         channel_id = ctx.channel.id
         time = datetime.now()
 
-        self.splatnet.update_connection(self.bot.session)
+        self.splatnet.update_connection(self.bot.session)   # It's really dumb but sometimes on_ready doesn't run...
 
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         await rotation.populate_data()
