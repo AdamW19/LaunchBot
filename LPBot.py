@@ -34,7 +34,7 @@ class LPBot(commands.Bot):
         loop.run_until_complete(self.close())
 
     async def close(self):
-        if self.session.closed:
+        if self.session is not None:
             await self.session.close()
 
     async def garbage_collector(self):
