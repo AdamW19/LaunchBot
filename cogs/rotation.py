@@ -85,10 +85,10 @@ class Rotation(commands.Cog):
                 await ctx.send(embed=embed, file=file)
         else:
             if rotation.mode_type is ModeTypes.SALMON:
-                await ctx.send(":warning: Salmon run is **not** currently available. Here is the next rotation:")
+                await ctx.send(":warning: Salmon Run is currently **not** available. Here is the next rotation:")
                 await self.make_next_rotation(schedule_type, ctx, True)
             else:
-                await ctx.send(":x: Not able to get rotation.")
+                await ctx.send(":x: Not able to get rotation information. Contact the developers.")
 
     async def make_next_rotation(self, schedule_type: ModeTypes, ctx, overflow: bool):
         channel_id = ctx.channel.id
@@ -108,7 +108,7 @@ class Rotation(commands.Cog):
             else:
                 await ctx.send(embed=embed, file=file)
         else:
-            await ctx.send(":x: Not able to get rotation.")
+            await ctx.send(":x: Not able to get rotation. Contact the developers.")
 
     async def generate_embed(self, rotation: SplatoonRotation, channel_id: str, is_next: bool, overflow: bool):
         title = ""
@@ -160,11 +160,12 @@ class Rotation(commands.Cog):
         time_str = str(time_diff)
 
         if rotation.mode_type is ModeTypes.SALMON and not overflow and not is_next:
-            embed.add_field(name="Time Until End of Rotation", value=time_str)
+            time_until_str = "Time Until End of Rotation"
         elif is_next:
-            embed.add_field(name="Time Until Start of Rotation", value=time_str)
+            time_until_str = "Time Until Start of Rotation"
         else:
-            embed.add_field(name="Time Until Next Rotation", value=time_str)
+            time_until_str = "Time Until Next Rotation"
+        embed.add_field(name=time_until_str, value=time_str, inline=False)
 
         embed, file = await self.generate_send_gif(embed, rotation, rotation.mode_type, channel_id)
         return embed, file
