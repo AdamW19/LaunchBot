@@ -20,8 +20,8 @@ class ModeTypes(Enum):
 
 class Splatfest:
     # Just a container to hold Splatfest info
-    stage_c = None
-    stage_c_image = None
+    splatfest_stage = None
+    splatfest_image = None
 
 
 class SplatoonRotation:
@@ -31,14 +31,12 @@ class SplatoonRotation:
         self.splatnet = splatnet
 
         self.mode = None
-        self.stage_a = None
-        self.stage_a_image = None
+        self.stages = []
+        self.stage_images = []
         self.start_time = None
         self.end_time = None
         self.next_rotation = None
         if mode_type is not ModeTypes.SALMON:
-            self.stage_b = None  # Not populated for salmon run
-            self.stage_b_image = None  # Not populated for salmon run
             self.splatfest = None  # For splatfest information
         if mode_type is ModeTypes.SALMON:
             self.weapons_array = None  # For salmon run only
@@ -54,8 +52,8 @@ class SplatoonRotation:
             data = await self.splatnet.get_turf()
             self.mode_type = ModeTypes.SPLATFEST  # gotta remember to update the mode
             self.splatfest = Splatfest()
-            self.splatfest.stage_c = splatfest_info["special_stage"]["name"]
-            self.splatfest.stage_c_image = IMAGE_BASE + splatfest_info["special_stage"]["image"]
+            self.splatfest.splatfest_stage = splatfest_info["special_stage"]["name"]
+            self.splatfest.splatfest_image = IMAGE_BASE + splatfest_info["special_stage"]["image"]
         else:
             if self.mode_type is ModeTypes.REGULAR:
                 data = await self.splatnet.get_turf()
@@ -73,18 +71,18 @@ class SplatoonRotation:
                 self.end_time = datetime.fromtimestamp(rotation["end_time"], self.target_time.tzname())
                 self.next_rotation = datetime.fromtimestamp(data[1]["start_time"], self.target_time.tzname())
                 if self.mode_type is not ModeTypes.SALMON:
-                    self.stage_a = rotation["stage_a"]["name"]
-                    self.stage_a_image = IMAGE_BASE + rotation["stage_a"]["image"]
+                    self.stages.append(rotation["stage_a"]["name"])
+                    self.stage_images.append(IMAGE_BASE + rotation["stage_a"]["image"])
                     self.mode = rotation["rule"]["name"]
-                    self.stage_b = rotation["stage_b"]["name"]
-                    self.stage_b_image = IMAGE_BASE + rotation["stage_b"]["image"]
+                    self.stages.append(rotation["stage_b"]["name"])
+                    self.stage_images.append(IMAGE_BASE + rotation["stage_b"]["image"])
                     return True
                 else:
                     # salmon run is a special exception, requires special processing
                     self.mode = "Salmon Run"
                     self.weapons_array = LinkedList()
-                    self.stage_a = rotation["stage"]["name"]
-                    self.stage_a_image = IMAGE_BASE + rotation["stage"]["image"]
+                    self.stages.append(rotation["stage"]["name"])
+                    self.stage_images.append(IMAGE_BASE + rotation["stage"]["image"])
 
                     # getting weapons, using SR_TERM_CHAR to separate b/t weapon name and weapon id
                     for weapon in rotation["weapons"]:
@@ -115,6 +113,13 @@ class SplatoonRotation:
     def format_time_sch(time: datetime):
         # returns <hour> <am/pm>
         return time.strftime("%-I %p")
+
+    @staticmethod
+    def print_stages(stages: list):
+        stage_str = ""
+        for stage in stages:
+            stage_str += stage + "\n"
+        return stage_str
 
     @staticmethod
     def print_sr_weapons(weapons_array: LinkedList):
