@@ -52,6 +52,8 @@ class LPBot(commands.Bot):
         print("[LPBot] Connected")
         self.session = aiohttp.ClientSession(headers=config.header)
         await self.get_channel(config.online_logger_id).send("*Connected to Discord*")
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing,
+                                                             name="wahoo zones | l?help"))
 
     async def on_command(self, ctx):
         if ctx.guild is None:
