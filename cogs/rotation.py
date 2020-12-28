@@ -76,6 +76,8 @@ class Rotation(commands.Cog):
         success = await rotation.populate_data()
 
         if success:
+            if rotation.mode_type is ModeTypes.SPLATFEST:
+                await ctx.send(":warning: It's currently Splatfest -- **Ranked/League modes are not available.**")
             embed, file = await self.generate_embed(rotation, channel_id, False, False)
             if file is None:
                 await ctx.send(embed=embed)
@@ -83,7 +85,7 @@ class Rotation(commands.Cog):
                 await ctx.send(embed=embed, file=file)
         else:
             if rotation.mode_type is ModeTypes.SALMON:
-                await ctx.send(":warning: Salmon run is **not** currently happening. Here is the next rotation:")
+                await ctx.send(":warning: Salmon run is **not** currently available. Here is the next rotation:")
                 await self.make_next_rotation(schedule_type, ctx, True)
             else:
                 await ctx.send(":x: Not able to get rotation.")
@@ -114,7 +116,10 @@ class Rotation(commands.Cog):
             title = "Next"
         title += " Rotation Information - "
         thumbnail = ""
-        if rotation.mode_type is ModeTypes.REGULAR:
+        if rotation.mode_type is ModeTypes.SPLATFEST:
+            title += "Splatfest Battle"
+            thumbnail = config.images["splatfest"]
+        elif rotation.mode_type is ModeTypes.REGULAR:
             title += "Regular Battle"
             thumbnail = config.images["regular"]
         elif rotation.mode_type is ModeTypes.RANKED:
@@ -136,7 +141,11 @@ class Rotation(commands.Cog):
             embed = await Rotation.generate_salmon_embed(embed, rotation)
         else:
             embed.add_field(name="Mode", value=rotation.mode)
-            embed.add_field(name="Stages", value=rotation.stage_a + "\n" + rotation.stage_b)
+            if rotation.mode_type is ModeTypes.SPLATFEST:
+                stage_str = rotation.stage_a + "\n" + rotation.stage_b + "\n" + rotation.splatfest.stage_c
+            else:
+                stage_str = rotation.stage_a + "\n" + rotation.stage_b
+            embed.add_field(name="Stages", value=stage_str)
 
         # If we've come here b/c there's no current salmon run, print when the next rotation will end instead
         if overflow:

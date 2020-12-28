@@ -10,11 +10,18 @@ IMAGE_BASE = "https://splatoon2.ink/assets/splatnet"
 
 
 class ModeTypes(Enum):
+    SPLATFEST = auto()
     REGULAR = auto()
     RANKED = auto()
     LEAGUE = auto()
     SALMON = auto()
     PRIVATE = auto()
+
+
+class Splatfest:
+    # Just a container to hold Splatfest info
+    stage_c = None
+    stage_c_image = None
 
 
 class SplatoonRotation:
@@ -30,22 +37,34 @@ class SplatoonRotation:
         self.end_time = None
         self.next_rotation = None
         if mode_type is not ModeTypes.SALMON:
-            self.stage_b = None                 # Not populated for salmon run
-            self.stage_b_image = None           # Not populated for salmon run
+            self.stage_b = None  # Not populated for salmon run
+            self.stage_b_image = None  # Not populated for salmon run
+            self.splatfest = None  # For splatfest information
         if mode_type is ModeTypes.SALMON:
-            self.weapons_array = None           # for salmon run only
+            self.weapons_array = None  # For salmon run only
 
     async def populate_data(self):
         timestamp = self.target_time.timestamp()
         data = None
-        if self.mode_type is ModeTypes.REGULAR:
+        splatfest_info = (await self.splatnet.get_na_splatfest())["festivals"][0]
+
+        # Checking to see if splatfest is happening, the 0th elm is going to be the most recent one
+        if self.mode_type is not ModeTypes.SALMON and splatfest_info["times"]["start"] <= timestamp < \
+                splatfest_info["times"]["end"]:
             data = await self.splatnet.get_turf()
-        elif self.mode_type is ModeTypes.RANKED:
-            data = await self.splatnet.get_ranked()
-        elif self.mode_type is ModeTypes.LEAGUE:
-            data = await self.splatnet.get_league()
-        elif self.mode_type is ModeTypes.SALMON:
-            data = await self.splatnet.get_salmon_detail()
+            self.mode_type = ModeTypes.SPLATFEST  # gotta remember to update the mode
+            self.splatfest = Splatfest()
+            self.splatfest.stage_c = splatfest_info["special_stage"]["name"]
+            self.splatfest.stage_c_image = IMAGE_BASE + splatfest_info["special_stage"]["image"]
+        else:
+            if self.mode_type is ModeTypes.REGULAR:
+                data = await self.splatnet.get_turf()
+            elif self.mode_type is ModeTypes.RANKED:
+                data = await self.splatnet.get_ranked()
+            elif self.mode_type is ModeTypes.LEAGUE:
+                data = await self.splatnet.get_league()
+            elif self.mode_type is ModeTypes.SALMON:
+                data = await self.splatnet.get_salmon_detail()
 
         # find a regular/ranked/league session given the target time
         for rotation in data:
