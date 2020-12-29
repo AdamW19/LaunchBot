@@ -26,6 +26,7 @@ async def generate_gif(rotation_info: SplatoonRotation, channel_id: str, bot):
     for i in range(len(rotation_info.stage_images)):
         await client.send_image_request(image_url=rotation_info.stage_images[i], file_path=image_filenames[i])
 
+
     # making the gif
     await render_gif(image_base, gif_filename)
 

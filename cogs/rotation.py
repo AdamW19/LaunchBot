@@ -78,7 +78,8 @@ class Rotation(commands.Cog):
 
         if success:
             if rotation.mode_type is ModeTypes.SPLATFEST:
-                await ctx.send(":warning: It's currently Splatfest -- **Ranked/League modes are not available.**")
+                await ctx.send(":warning: Splatfest is currently occurring -- **Ranked/League modes are not "
+                               "available.**")
             embed, file = await self.generate_embed(rotation, channel_id, False, False)
             if file is None:
                 await ctx.send(embed=embed)

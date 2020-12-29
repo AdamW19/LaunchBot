@@ -18,12 +18,6 @@ class ModeTypes(Enum):
     PRIVATE = auto()
 
 
-class Splatfest:
-    # Just a container to hold Splatfest info
-    splatfest_stage = None
-    splatfest_image = None
-
-
 class SplatoonRotation:
     def __init__(self, target_time: datetime, mode_type: ModeTypes, splatnet: Splatnet):
         self.target_time = target_time
@@ -36,8 +30,6 @@ class SplatoonRotation:
         self.start_time = None
         self.end_time = None
         self.next_rotation = None
-        if mode_type is not ModeTypes.SALMON:
-            self.splatfest = None  # For splatfest information
         if mode_type is ModeTypes.SALMON:
             self.weapons_array = None  # For salmon run only
 
@@ -47,13 +39,12 @@ class SplatoonRotation:
         splatfest_info = (await self.splatnet.get_na_splatfest())["festivals"][0]
 
         # Checking to see if splatfest is happening, the 0th elm is going to be the most recent one
-        if self.mode_type is not ModeTypes.SALMON and splatfest_info["times"]["start"] <= timestamp < \
-                splatfest_info["times"]["end"]:
+        if self.mode_type is not ModeTypes.SALMON and (splatfest_info["times"]["start"] <= timestamp <
+                                                       splatfest_info["times"]["end"] or True):
             data = await self.splatnet.get_turf()
             self.mode_type = ModeTypes.SPLATFEST  # gotta remember to update the mode
-            self.splatfest = Splatfest()
-            self.splatfest.splatfest_stage = splatfest_info["special_stage"]["name"]
-            self.splatfest.splatfest_image = IMAGE_BASE + splatfest_info["special_stage"]["image"]
+            self.stages.append(splatfest_info["special_stage"]["name"])
+            self.stage_images.append(IMAGE_BASE + splatfest_info["special_stage"]["image"])
         else:
             if self.mode_type is ModeTypes.REGULAR:
                 data = await self.splatnet.get_turf()
@@ -76,6 +67,11 @@ class SplatoonRotation:
                     self.mode = rotation["rule"]["name"]
                     self.stages.append(rotation["stage_b"]["name"])
                     self.stage_images.append(IMAGE_BASE + rotation["stage_b"]["image"])
+
+                    # If it is splatfest, we want to make the splatfest map 3rd in the list
+                    if self.mode_type is ModeTypes.SPLATFEST:
+                        self.stages[0], self.stages[2] = self.stages[2], self.stages[0]
+                        self.stage_images[0], self.stage_images[2] = self.stage_images[2], self.stage_images[0]
                     return True
                 else:
                     # salmon run is a special exception, requires special processing
