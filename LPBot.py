@@ -6,6 +6,7 @@ from discord.ext import commands
 import os
 import asyncio
 import config
+from modules import checks
 
 print("[LPBot] Initializing...")
 
@@ -14,6 +15,8 @@ EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help"]
 
 class LPBot(commands.Bot):
     def __init__(self, extensions):
+        checks.make_sure_file_exists("config.py", "config_public.py")
+
         intents = discord.Intents.default()
         intents.members = True
         intents.guilds = True
@@ -34,7 +37,7 @@ class LPBot(commands.Bot):
         loop.run_until_complete(self.close())
 
     async def close(self):
-        if self.session.closed:
+        if self.session is not None:
             await self.session.close()
 
     async def garbage_collector(self):
@@ -52,10 +55,16 @@ class LPBot(commands.Bot):
         print("[LPBot] Connected")
         self.session = aiohttp.ClientSession(headers=config.header)
         await self.get_channel(config.online_logger_id).send("*Connected to Discord*")
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing,
+                                                             name="wahoo zones | l?help"))
 
     async def on_command(self, ctx):
-        await self.get_channel(config.online_logger_id).send("Command received from `" + ctx.author.name + "` on `" +
-                                                             ctx.guild.name + "`: " + ctx.message.content)
+        if ctx.guild is None:
+            await self.get_channel(config.online_logger_id).send( "Command received from `" + ctx.author.name + "`: " +
+                                                                  ctx.message.content)
+        else:
+            await self.get_channel(config.online_logger_id).send("Command received from `" + ctx.author.name + "` on `"
+                                                                 + ctx.guild.name + "`: " + ctx.message.content)
 
     async def on_command_error(self, ctx, error):
         if isinstance(error, discord.Forbidden) or "missing permissions" in str(error).lower():
@@ -71,9 +80,13 @@ class LPBot(commands.Bot):
             if config.send_invalid_command:
                 await ctx.send(":x: Sorry, `" + ctx.invoked_with +
                                "` is not a valid command.  Type `l?help` for a list of commands.")
-            await self.get_channel(config.online_logger_id).send("Invalid command received from `" + ctx.author.name +
-                                                                 "` on `" + ctx.guild.name + "`: " +
-                                                                 ctx.message.content)
+            if ctx.guild is None:
+                await self.get_channel(config.online_logger_id).send("Invalid command received from `" + ctx.author.name
+                                                                     + "`: " + ctx.message.content)
+            else:
+                await self.get_channel(config.online_logger_id).send("Invalid command received from `" + ctx.author.name
+                                                                     + "` on `" + ctx.guild.name + "`: " +
+                                                                     ctx.message.content)
         elif isinstance(error, discord.ext.commands.CheckFailure):
             if isinstance(error, discord.ext.commands.NotOwner):
                 await ctx.send(":warning: You are not authorized to run this command, "
@@ -85,9 +98,14 @@ class LPBot(commands.Bot):
         elif isinstance(error, discord.ext.commands.BadArgument):
             await ctx.send(":x: Your command arguments could not be interpreted, please try again (Did you forget a"
                            " \" character?).")
-            await self.get_channel(config.online_logger_id).send("Invalid command arguments received from `" +
-                                                                 ctx.author.name + "` on `" + ctx.guild.name + "`: " +
-                                                                 ctx.message.content)
+            if ctx.guild is None:
+                await self.get_channel(config.online_logger_id).send("Invalid command arguments from `" +
+                                                                     ctx.author.name + "` `: " + ctx.message.content)
+            else:
+                await self.get_channel(config.online_logger_id).send("Invalid command arguments from `" +
+                                                                     ctx.author.name + "` on `" + ctx.guild.name + "`: "
+                                                                     + ctx.message.content)
+
         else:
             await self.send_unexpected_error(ctx, error)
 

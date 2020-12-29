@@ -10,6 +10,7 @@ IMAGE_BASE = "https://splatoon2.ink/assets/splatnet"
 
 
 class ModeTypes(Enum):
+    SPLATFEST = auto()
     REGULAR = auto()
     RANKED = auto()
     LEAGUE = auto()
@@ -24,28 +25,35 @@ class SplatoonRotation:
         self.splatnet = splatnet
 
         self.mode = None
-        self.stage_a = None
-        self.stage_a_image = None
+        self.stages = []
+        self.stage_images = []
         self.start_time = None
         self.end_time = None
         self.next_rotation = None
-        if mode_type is not ModeTypes.SALMON:
-            self.stage_b = None                 # Not populated for salmon run
-            self.stage_b_image = None           # Not populated for salmon run
         if mode_type is ModeTypes.SALMON:
-            self.weapons_array = None           # for salmon run only
+            self.weapons_array = None  # For salmon run only
 
     async def populate_data(self):
         timestamp = self.target_time.timestamp()
         data = None
-        if self.mode_type is ModeTypes.REGULAR:
+        splatfest_info = (await self.splatnet.get_na_splatfest())["festivals"][0]
+
+        # Checking to see if splatfest is happening, the 0th elm is going to be the most recent one
+        if self.mode_type is not ModeTypes.SALMON and (splatfest_info["times"]["start"] <= timestamp <
+                                                       splatfest_info["times"]["end"] or True):
             data = await self.splatnet.get_turf()
-        elif self.mode_type is ModeTypes.RANKED:
-            data = await self.splatnet.get_ranked()
-        elif self.mode_type is ModeTypes.LEAGUE:
-            data = await self.splatnet.get_league()
-        elif self.mode_type is ModeTypes.SALMON:
-            data = await self.splatnet.get_salmon_detail()
+            self.mode_type = ModeTypes.SPLATFEST  # gotta remember to update the mode
+            self.stages.append(splatfest_info["special_stage"]["name"])
+            self.stage_images.append(IMAGE_BASE + splatfest_info["special_stage"]["image"])
+        else:
+            if self.mode_type is ModeTypes.REGULAR:
+                data = await self.splatnet.get_turf()
+            elif self.mode_type is ModeTypes.RANKED:
+                data = await self.splatnet.get_ranked()
+            elif self.mode_type is ModeTypes.LEAGUE:
+                data = await self.splatnet.get_league()
+            elif self.mode_type is ModeTypes.SALMON:
+                data = await self.splatnet.get_salmon_detail()
 
         # find a regular/ranked/league session given the target time
         for rotation in data:
@@ -54,18 +62,23 @@ class SplatoonRotation:
                 self.end_time = datetime.fromtimestamp(rotation["end_time"], self.target_time.tzname())
                 self.next_rotation = datetime.fromtimestamp(data[1]["start_time"], self.target_time.tzname())
                 if self.mode_type is not ModeTypes.SALMON:
-                    self.stage_a = rotation["stage_a"]["name"]
-                    self.stage_a_image = IMAGE_BASE + rotation["stage_a"]["image"]
+                    self.stages.append(rotation["stage_a"]["name"])
+                    self.stage_images.append(IMAGE_BASE + rotation["stage_a"]["image"])
                     self.mode = rotation["rule"]["name"]
-                    self.stage_b = rotation["stage_b"]["name"]
-                    self.stage_b_image = IMAGE_BASE + rotation["stage_b"]["image"]
+                    self.stages.append(rotation["stage_b"]["name"])
+                    self.stage_images.append(IMAGE_BASE + rotation["stage_b"]["image"])
+
+                    # If it is splatfest, we want to make the splatfest map 3rd in the list
+                    if self.mode_type is ModeTypes.SPLATFEST:
+                        self.stages[0], self.stages[2] = self.stages[2], self.stages[0]
+                        self.stage_images[0], self.stage_images[2] = self.stage_images[2], self.stage_images[0]
                     return True
                 else:
                     # salmon run is a special exception, requires special processing
                     self.mode = "Salmon Run"
                     self.weapons_array = LinkedList()
-                    self.stage_a = rotation["stage"]["name"]
-                    self.stage_a_image = IMAGE_BASE + rotation["stage"]["image"]
+                    self.stages.append(rotation["stage"]["name"])
+                    self.stage_images.append(IMAGE_BASE + rotation["stage"]["image"])
 
                     # getting weapons, using SR_TERM_CHAR to separate b/t weapon name and weapon id
                     for weapon in rotation["weapons"]:
@@ -96,6 +109,13 @@ class SplatoonRotation:
     def format_time_sch(time: datetime):
         # returns <hour> <am/pm>
         return time.strftime("%-I %p")
+
+    @staticmethod
+    def print_stages(stages: list):
+        stage_str = ""
+        for stage in stages:
+            stage_str += stage + "\n"
+        return stage_str
 
     @staticmethod
     def print_sr_weapons(weapons_array: LinkedList):
