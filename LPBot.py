@@ -6,6 +6,7 @@ from discord.ext import commands
 import os
 import asyncio
 import config
+from modules import checks
 
 print("[LPBot] Initializing...")
 
@@ -14,6 +15,8 @@ EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help"]
 
 class LPBot(commands.Bot):
     def __init__(self, extensions):
+        checks.make_sure_file_exists("config.py", "config_public.py")
+
         intents = discord.Intents.default()
         intents.members = True
         intents.guilds = True
