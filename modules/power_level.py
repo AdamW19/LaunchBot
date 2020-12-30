@@ -103,7 +103,7 @@ def calc_new_rating(environment: trueskill.TrueSkill, team_alpha: Team, team_bet
 
 
 # For testing purposes
-'''env = trueskill.TrueSkill(draw_probability=0)
+env = trueskill.TrueSkill(draw_probability=0)
 team_a = Team(active_players=[Player(env, 0), Player(env, 1), Player(env, 2), Player(env, 3)])
 team_b = Team(active_players=[Player(env, 4), Player(env, 5), Player(env, 6), Player(env, 7)], captain=Player(env, 7))
 calc_new_rating(env, team_a, team_b, Result.BETA_WIN)
@@ -115,4 +115,4 @@ print(team_a)
 print(hash(team_a))
 
 print(team_b)
-print(hash(team_b))'''
+print(hash(team_b))
