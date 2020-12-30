@@ -11,7 +11,7 @@ class Result(Enum):
 
 
 class Player:
-    def __init__(self, environment: trueskill.TrueSkill, player_id: str, mu: float = None, sigma: float = None):
+    def __init__(self, environment: trueskill.TrueSkill, player_id: int, mu: float = None, sigma: float = None):
         # Remember, mu is player's mean power level and sigma is std dev (sigma^2 is variance)
         self.player_id = player_id
         self.rating = environment.create_rating(mu, sigma)
@@ -52,17 +52,17 @@ class Team:
         # Mildly complex string builder for a team, but is good for the hash function
         team_str = "Team "
         if len(self.active_players) is not 0:
-            team_str += "with players "
+            team_str += "with players:"
             for team_player in self.active_players:
-                team_str += str(team_player.player_id) + " "
+                team_str += "\n" + str(team_player)
 
         if self.captain is not None:
-            team_str += "with captain {} ".format(self.captain.player_id)
+            team_str += "\nCaptain is player {}".format(self.captain.player_id)
 
         if len(self.inactive_players) is not 0:
-            team_str += "with subs "
+            team_str += "\nWith subs:"
             for inactive in self.inactive_players:
-                team_str += str(inactive.player_id) + " "
+                team_str += "\n" + str(inactive)
         return team_str
 
     def __hash__(self):
@@ -104,18 +104,15 @@ def calc_new_rating(environment: trueskill.TrueSkill, team_alpha: Team, team_bet
 
 # For testing purposes
 '''env = trueskill.TrueSkill(draw_probability=0)
-team_a = Team(active_players=(Player(env, 0), Player(env, 1), Player(env, 2), Player(env, 3)))
-team_b = Team(active_players=(Player(env, 4), Player(env, 5), Player(env, 6), Player(env, 7)))
+team_a = Team(active_players=[Player(env, 0), Player(env, 1), Player(env, 2), Player(env, 3)])
+team_b = Team(active_players=[Player(env, 4), Player(env, 5), Player(env, 6), Player(env, 7)], captain=Player(env, 7))
 calc_new_rating(env, team_a, team_b, Result.BETA_WIN)
+
+team_a.add_sub(Player(env, 8))
+team_b.inactive_players.append(Player(env, 9))
 
 print(team_a)
 print(hash(team_a))
-for player in team_a.active_players:
-    print(player)
-    print(hash(player))
 
 print(team_b)
-print(hash(team_b))
-for player in team_b.active_players:
-    print(player)
-    print(hash(player))'''
+print(hash(team_b))'''
