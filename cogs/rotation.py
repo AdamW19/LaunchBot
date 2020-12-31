@@ -71,8 +71,6 @@ class Rotation(commands.Cog):
         channel_id = ctx.channel.id
         time = datetime.now()
 
-        self.splatnet.update_connection(self.bot.session)  # It's really dumb but sometimes on_ready doesn't run...
-
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         success = await rotation.populate_data()
 
@@ -95,8 +93,6 @@ class Rotation(commands.Cog):
     async def make_next_rotation(self, schedule_type: ModeTypes, ctx, overflow: bool):
         channel_id = ctx.channel.id
         time = datetime.now()
-
-        self.splatnet.update_connection(self.bot.session)   # It's really dumb but sometimes on_ready doesn't run...
 
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         await rotation.populate_data()

@@ -12,9 +12,6 @@ class AsyncClient:
         self.request_suffix = request_suffix
         self.connection = session
 
-    def update_connection(self, session):
-        self.connection = session
-
     async def send_request(self, request: str):
         async with self.connection.get(self.request_prefix + request + self.request_suffix, headers=self.header) as response:
             if response.status == 200:

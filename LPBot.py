@@ -1,7 +1,6 @@
 import discord
 import aiohttp
 import traceback
-import sys
 from discord.ext import commands
 import os
 import asyncio
@@ -31,6 +30,10 @@ class LPBot(commands.Bot):
 
         self.loop.create_task(self.garbage_collector())
 
+        # Assigns self.session an aiohttp session because you need to assign it async
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.assign_session())
+
     # Below 2 methods properly close the session once the bot's killed
     def __del__(self):
         loop = asyncio.get_event_loop()
@@ -39,6 +42,10 @@ class LPBot(commands.Bot):
     async def close(self):
         if self.session is not None:
             await self.session.close()
+
+    async def assign_session(self):
+        if self.session is None:
+            self.session = aiohttp.ClientSession(headers=config.header)
 
     async def garbage_collector(self):
         """Removes all .gif and .png files from gif generation for lobby/rotation info"""
@@ -53,7 +60,6 @@ class LPBot(commands.Bot):
 
     async def on_ready(self):
         print("[LPBot] Connected")
-        self.session = aiohttp.ClientSession(headers=config.header)
         await self.get_channel(config.online_logger_id).send("*Connected to Discord*")
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing,
                                                              name="wahoo zones | l?help"))
