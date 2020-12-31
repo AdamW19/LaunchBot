@@ -93,8 +93,8 @@ class LPBot(commands.Bot):
                                "to be able to run `" + ctx.invoked_with +
                                "` you must be the owner of this bot.")
             else:
-                await ctx.send(":warning: Either this command is disabled, you are not authorized to run this command, "
-                               "or this command is not being run in the proper context.")
+                await ctx.send(":warning: Either you are not authorized to run this command or this command is not "
+                               "being run in the proper context.")
         elif isinstance(error, discord.ext.commands.BadArgument):
             await ctx.send(":x: Your command arguments could not be interpreted, please try again (Did you forget a"
                            " \" character?).")
