@@ -10,7 +10,7 @@ from modules import checks
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.staff"]
 
 
 class LPBot(commands.Bot):
