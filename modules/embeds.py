@@ -81,5 +81,5 @@ def add_help_embed_footer_links(help_embed, bot):
     help_embed.add_field(name="<:github:791151957226160178>  Github",
                          value="Visit the code for " + bot.user.name + " [here.](https://github.com/AdamW19/LaunchBot)")
     help_embed.add_field(name=":pray:  Special Thanks",
-                         value="Type `l?special_thanks` for any credit for any APIs and technology used to make " +
+                         value="Type `l?special_thanks` to see any APIs and technologies used to make " +
                                bot.user.name)
