@@ -22,6 +22,12 @@ class Database:
         rows = cursor.fetchall()
         return rows
 
+    def execute_query_no_arg(self, query: str):
+        cursor = self.conn.cursor()
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        return rows
+
     def add_row(self, unformatted_query: str, arguments: tuple):
         """ Returns the row id that was just added """
         cur = self.conn.cursor()
