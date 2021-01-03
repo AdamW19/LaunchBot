@@ -20,7 +20,7 @@ async def gen_join_leave_embed(member, on_leave):
         roles = "*None*"
 
     if on_leave:
-        embed = discord.Embed(color=member_color, title="Member left", description= member_mention + " " + member_name)
+        embed = discord.Embed(color=member_color, title="Member left", description=member_mention + " " + member_name)
         embed.add_field(name="Join date", value=member_join)
         embed.add_field(name="Roles", value=roles)
     else:

@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import config
 import discord
@@ -22,7 +23,7 @@ class Staff(Cog):
         # staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
         return True  # staff_role in ctx.author.roles
 
-    @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["change", "modify"])
+    @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["change", "modify", "staff"])
     async def settings(self, ctx):
         embed = discord.Embed(title="Settings Help", color=config.embed_color, description="Alias for command are "
                                                                                            "`change`, `modify`, "
@@ -52,7 +53,8 @@ class Staff(Cog):
             map_str = code_parser.gen_maplist_str(map_dict)
 
             if len(map_list) is 0 or "error" in map_dict:
-                await ctx.send(":x: No maplist set! Please set a maplist by providing one with this command.")
+                await ctx.send(":x: No maplist set! Please set a maplist by providing one with this command. Use "
+                               "http://nkitten.net/splatoon2/random/ to generate a maplist code.")
             else:
                 await ctx.send("Current maplist:")
                 await ctx.send("```" + map_str + "```")
@@ -61,9 +63,13 @@ class Staff(Cog):
             if "error" in check:
                 await ctx.send(":x: Invalid map list. Please try again.")
                 return
+
+            maplist_print = "```" + code_parser.gen_maplist_str(check) + "```"
             self.bot.db.execute_commit_query(db_strings.UPDATE_SETTING_MAPLIST, (args[0], ctx.guild.id))
             await ctx.send(":white_check_mark: Successfully updated the maplist:")
-            await ctx.send("```" + code_parser.gen_maplist_str(check) + "```")
+            await ctx.send(maplist_print)
+
+            await ctx.guild.get_channel(config.launchpoint_maplist_id).send(maplist_print)
         else:
             await ctx.send(":x: Too many arguments. Type `l?settings` for a list of commands and their use cases. ")
 
@@ -109,9 +115,11 @@ class Staff(Cog):
             # otherwise start new season
             self.bot.db.init_new_season(ctx.guild.id)
 
-            # Sets confirmation/reminder for maplist, pings launchpoint about the new season
+            # Sets confirmation/reminder for maplist
             await ctx.send(":white_check_mark: Successfully started new season. **Remember to update the maplist via "
                            "`s?settings maplist`!**")
+
+            # pings launchpoint about the new season
             launchpoint_role = discord.utils.get(ctx.guild.roles, name="LaunchPoint")
             season_num = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
             season_num = season_num[0][3]
@@ -122,7 +130,8 @@ class Staff(Cog):
     async def join(self, ctx):
         # TODO remove debug command
         guild_id = ctx.guild.id
-        self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0))
+        current_time = int(time.time())
+        self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, current_time, 0, 0))
 
     @commands.command(name="tent", aliases=["tenta"])
     async def best_weapon(self, ctx):

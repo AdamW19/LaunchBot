@@ -59,7 +59,6 @@ class Profiles(commands.Cog):
         else:
             self.db.execute_commit_query("DELETE FROM Player WHERE player_id = ?", player_id)
 
-
         await ctx.send("successful")
 
     @profile.command(name="set", aliases=["s"])

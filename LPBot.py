@@ -39,6 +39,7 @@ class LPBot(commands.Bot):
         self.session = None
         self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + "season-{}.db")
 
+        print("[LPBot] Loading extensions...")
         for e in extensions:
             self.load_extension(e)
 

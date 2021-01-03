@@ -1,5 +1,5 @@
 from db.cogs import db_strings
-from db.cogs.database import Database, DB_FILE_BASE
+from db.cogs.database import Database
 from modules.power_level import Team, Result
 import time
 
@@ -105,7 +105,7 @@ class SplatoonDB(Database):
                                                                               player_id))
         self.conn.commit()
 
-def match_finish(self, alpha_team: Team, beta_team: Team, scrim_id: int, result: Result):
+    def match_finish(self, alpha_team: Team, beta_team: Team, scrim_id: int, result: Result):
         alpha_win = alpha_loss = beta_win = beta_loss = 0
         if result is Result.ALPHA_WIN:
             alpha_win = 1
@@ -124,7 +124,8 @@ def match_finish(self, alpha_team: Team, beta_team: Team, scrim_id: int, result:
             player_row = self.execute_query(db_strings.GET_PLAYER, player_id)
             player_game_wins = player_row[3] + alpha_win
             player_game_loses = player_row[4] + alpha_loss
-            self.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT, (player_game_wins, player_game_loses, player_id))
+            self.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
+                                      (player_game_wins, player_game_loses, player_id))
 
         for player in beta_team.players:
             player_id = player.player_id
@@ -136,7 +137,8 @@ def match_finish(self, alpha_team: Team, beta_team: Team, scrim_id: int, result:
             player_row = self.execute_query(db_strings.GET_PLAYER, player_id)
             player_game_wins = player_row[3] + beta_win
             player_game_loses = player_row[4] + beta_loss
-            self.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT, (player_game_wins, player_game_loses, player_id))
+            self.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
+                                      (player_game_wins, player_game_loses, player_id))
 
         scrim_row = self.execute_query(db_strings.GET_SCRIM, scrim_id)
         alpha_score = scrim_row[3]
