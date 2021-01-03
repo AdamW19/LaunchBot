@@ -6,10 +6,23 @@ import os
 import asyncio
 import config
 from modules import checks
+import glob
+from db.cogs.splat_db import SplatoonDB
+from db.cogs.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.staff"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles"]
+
+
+def get_db_file():
+    # Gets the most recently used db file from the db folder
+    list_of_files = glob.glob(DB_FILE_BASE + "*.db")
+    if len(list_of_files) == 0:
+        latest_file = DB_FILE_BASE + "season-0.db"
+    else:
+        latest_file = max(list_of_files, key=os.path.getctime)
+    return latest_file
 
 
 class LPBot(commands.Bot):
@@ -24,6 +37,7 @@ class LPBot(commands.Bot):
         super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
                          intents=intents)
         self.session = None
+        self.db = SplatoonDB(file_name=get_db_file())
 
         for e in extensions:
             self.load_extension(e)
