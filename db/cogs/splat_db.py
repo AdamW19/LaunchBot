@@ -1,5 +1,5 @@
-from db import db_strings
-from db.database import Database
+from db.cogs import db_strings
+from db.cogs.database import Database
 from modules.power_level import Team, Result
 import time
 
@@ -8,6 +8,7 @@ class SplatoonDB(Database):
 
     def __init__(self, file_name: str):
         super(SplatoonDB, self).__init__(db_filename=file_name)
+        self.init_season()
 
     def init_season(self):
         self.execute_query_no_arg(db_strings.INIT_PROFILE_TABLE)
@@ -27,6 +28,9 @@ class SplatoonDB(Database):
 
         # Updating seasons table
         self.execute_query_nr(db_strings.UPDATE_SEASON, (new_season_num, current_time, None, server_id))
+
+        # Inits any dropped tables
+        self.init_season()
 
     def purge_players(self, server_members: list):  # TODO add purge for players table
         # Get rid of all players in the Profiles db but not in the server
