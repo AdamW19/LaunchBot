@@ -15,6 +15,7 @@ class Player:
         # Remember, mu is player's mean power level and sigma is std dev (sigma^2 is variance)
         self.player_id = player_id
         self.rating = environment.create_rating(mu, sigma)
+        self.active_sub = False  # For players that finished a set but wasn't there at the beginning
 
     def __str__(self):
         return "Player {} with mu = {} and sigma = {}".format(self.player_id, self.rating.mu, self.rating.sigma)
@@ -24,45 +25,35 @@ class Player:
 
     def to_database(self):
         # returns what is needed for the database
-        return self.player_id, self.rating.mu, self.rating.sigma
+        return self.player_id, self.active_sub, self.rating.mu, self.rating.sigma
 
 
 class Team:
-    def __init__(self, active_players: list, captain: Player = None):
+    def __init__(self, players: list, captain: Player = None):
         # We maintain active and inactive players/subs, along with the captain and how many games were played
-        self.active_players = active_players
-        self.inactive_players = []
+        self.players = players
         self.captain = captain
-        self.play_time = {}
-
-        for active_player in self.active_players:
-            self.play_time[active_player.player_id] = 0
 
     def add_sub(self, new_player: Player, leaving_player: Player = None):
         # add sub player
-        self.play_time[new_player.player_id] = 0
-        self.active_players.append(new_player)
+        self.players.append(new_player)
+        new_player.active_sub = True
 
         # remove the person the sub replaced from the active lineup
-        if leaving_player is not None and leaving_player in self.active_players:
-            self.active_players.remove(leaving_player)
-            self.inactive_players.append(leaving_player)
+        if leaving_player is not None and leaving_player in self.players:
+            self.players.remove(leaving_player)
 
     def __str__(self):
         # Mildly complex string builder for a team, but is good for the hash function
         team_str = "Team "
-        if len(self.active_players) is not 0:
+        if len(self.players) is not 0:
             team_str += "with players:"
-            for team_player in self.active_players:
+            for team_player in self.players:
                 team_str += "\n" + str(team_player)
 
         if self.captain is not None:
             team_str += "\nCaptain is player {}".format(self.captain.player_id)
 
-        if len(self.inactive_players) is not 0:
-            team_str += "\nWith subs:"
-            for inactive in self.inactive_players:
-                team_str += "\n" + str(inactive)
         return team_str
 
     def __hash__(self):
@@ -70,13 +61,13 @@ class Team:
 
     def to_database(self):
         # returns what is needed for the database
-        return self.active_players, self.inactive_players, self.captain, self.play_time
+        return self.players, self.captain
 
 
 def calc_new_rating(environment: trueskill.TrueSkill, team_alpha: Team, team_beta: Team, result: Result):
     """ Calculates new rating for team members after a match """
-    team_a_players = tuple([player_a.rating for player_a in team_alpha.active_players])
-    team_b_players = tuple([player_b.rating for player_b in team_beta.active_players])
+    team_a_players = tuple([player_a.rating for player_a in team_alpha.players])
+    team_b_players = tuple([player_b.rating for player_b in team_beta.players])
 
     team_pattern = [team_a_players, team_b_players]
 
@@ -90,16 +81,9 @@ def calc_new_rating(environment: trueskill.TrueSkill, team_alpha: Team, team_bet
     new_team_a_scores = new_scores[0]
     new_team_b_scores = new_scores[1]
     for i in range(len(new_team_a_scores)):
-        team_alpha.active_players[i].rating = new_team_a_scores[i]
+        team_alpha.players[i].rating = new_team_a_scores[i]
     for i in range(len(new_team_b_scores)):
-        team_beta.active_players[i].rating = new_team_b_scores[i]
-
-    # Update play time
-    for alpha_player in team_alpha.active_players:
-        team_alpha.play_time[alpha_player.player_id] += 1
-
-    for beta_player in team_beta.active_players:
-        team_beta.play_time[beta_player.player_id] += 1
+        team_beta.players[i].rating = new_team_b_scores[i]
 
 
 # For testing purposes
