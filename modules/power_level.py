@@ -4,6 +4,8 @@ import trueskill
 A_WIN_RANK = [0, 1]
 B_WIN_RANK = [1, 0]
 
+MATCH_THRESHOLD = 15  # min number of matches to play before displaying player level
+
 
 class Result(Enum):
     ALPHA_WIN = auto()

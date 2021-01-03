@@ -12,13 +12,16 @@ from db.cogs.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles"]
 
 
 def get_db_file():
     # Gets the most recently used db file from the db folder
     list_of_files = glob.glob(DB_FILE_BASE + "*.db")
-    latest_file = max(list_of_files, key=os.path.getctime)
+    if len(list_of_files) == 0:
+        latest_file = DB_FILE_BASE + "season-0.db"
+    else:
+        latest_file = max(list_of_files, key=os.path.getctime)
     return latest_file
 
 
