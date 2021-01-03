@@ -1,5 +1,6 @@
 import sqlite3
 from sqlite3 import Error
+from shutil import copy
 
 
 class Database:
@@ -35,10 +36,8 @@ class Database:
         self.conn.commit()
         return cur.lastrowid
 
-    def copy_into_db(self, filename: str, table: str):
-        # TODO Test this
-        cur = self.conn.cursor()
-
-        cur.execute("ATTACH DATABASE ? as old_profile", filename)
-        cur.execute("INSERT INTO ? SELECT * FROM old_profile.?", (table, table))
-        cur.execute("DETACH DATABASE old_profile")
+    def start_new_season(self, season_num: int):
+        new_filename = self.filename[:7] + str(season_num) + self.filename[-3:]  # follows format of `season-[num].db`
+        copy(self.filename, new_filename)
+        self.conn = sqlite3.connect(new_filename)
+        self.filename = new_filename
