@@ -17,7 +17,7 @@ EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles"]
 
 def get_db_file():
     # Gets the most recently used db file from the db folder
-    list_of_files = glob.glob(DB_FILE_BASE + "*.db")
+    list_of_files = glob.glob("*.db")
     if len(list_of_files) == 0:
         latest_file = DB_FILE_BASE + "season-0.db"
     else:
