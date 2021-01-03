@@ -80,52 +80,52 @@ GET_TEAM = "SELECT * FROM Team WHERE team_id = ?"
 
 GET_SCRIM = "SELECT * FROM Scrim WHERE scrim_id = ?"
 
-GET_SETTINGS = "SELECT ? FROM Settings WHERE server_id = ?"
+GET_SETTINGS = "SELECT * FROM Settings WHERE server_id = ?"
 
-UPDATE_PROFILE = ("UPDATE Profile"
-                  "SET fc = ?"
+UPDATE_PROFILE = ("UPDATE Profile "
+                  "SET fc = ? "
                   "WHERE player_id = ?")
 
-UPDATE_PLAYER_RANK = ("UPDATE Player"
-                      "SET rank_mu = ?,"
-                      "rank_sigma = ?"
+UPDATE_PLAYER_RANK = ("UPDATE Player "
+                      "SET rank_mu = ?, "
+                      "rank_sigma = ? "
                       "WHERE player_id = ?")
 
-UPDATE_PLAYER_GAME_STAT = ("UPDATE Player"
-                           "SET num_game_win = ?,"
-                           "num_game_loss = ?"
+UPDATE_PLAYER_GAME_STAT = ("UPDATE Player "
+                           "SET num_game_win = ?, "
+                           "num_game_loss = ? "
                            "WHERE player_id = ?")
 
-UPDATE_PLAYER_SET_STAT = ("UPDATE Player"
-                          "SET num_set_win = ?,"
-                          "num_set_loss = ?"
+UPDATE_PLAYER_SET_STAT = ("UPDATE Player "
+                          "SET num_set_win = ?, "
+                          "num_set_loss = ? "
                           "WHERE player_id = ?")
 
-UPDATE_TEAM_SUB = ("UPDATE Team"
-                   "SET is_sub = ?"
+UPDATE_TEAM_SUB = ("UPDATE Team "
+                   "SET is_sub = ? "
                    "WHERE team_id = ? AND player_id = ?")
 
-UPDATE_SCRIM_SCORE = ("UPDATE Scrim"
-                      "SET alpha_score = ?,"
-                      "loser_score = ?"
+UPDATE_SCRIM_SCORE = ("UPDATE Scrim "
+                      "SET alpha_score = ?, "
+                      "beta_score = ? "
                       "WHERE scrim_id = ?")
 
-UPDATE_SETTING_MAPLIST = ("UPDATE Settings"
-                          "SET map_list = ?"
+UPDATE_SETTING_MAPLIST = ("UPDATE Settings "
+                          "SET map_list = ? "
                           "WHERE server_id = ?")
 
-UPDATE_SEASON = ("UPDATE Settings"
-                 "SET season_num = ?,"
-                 "season_start = ?,"
-                 "season_end = ?"
+UPDATE_SEASON = ("UPDATE Settings "
+                 "SET season_num = ?, "
+                 "season_start = ?, "
+                 "season_end = ? "
                  "WHERE server_id = ?")
 
-UPDATE_SEASON_END = ("UPDATE Settings"
-                     "SET season_end = ?"
+UPDATE_SEASON_END = ("UPDATE Settings "
+                     "SET season_end = ? "
                      "WHERE server_id = ?")
 
-UPDATE_LAST_SCRIM = ("UPDATE Settings"
-                     "SET prev_team_id = ?"
+UPDATE_LAST_SCRIM = ("UPDATE Settings "
+                     "SET prev_team_id = ? "
                      "WHERE server_id = ?")
 
 DELETE_PROFILE = "DELETE FROM Profile WHERE player_id = ?"

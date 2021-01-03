@@ -5,7 +5,7 @@ DB_FILE_BASE = "db/"
 
 
 class Database:
-    def __init__(self, db_filename: str):
+    def __init__(self, db_filename: str, file_format: str):
         def touch(path):  # Makes an empty file because connect requires the file to exist
             import os
             with open(path, 'a'):
@@ -17,6 +17,7 @@ class Database:
         except sqlite3.OperationalError:  # If error happens due to filename not existing, make the file and try again
             self.conn = sqlite3.connect(touch(db_filename))
         self.filename = db_filename
+        self.file_name_format = file_format
 
     def execute_commit_query(self, unformatted_query: str, arguments: tuple):
         """ Does a query but doesn't return anything """
@@ -55,7 +56,8 @@ class Database:
 
     def start_new_season(self, season_num: int):
         """ Helper method that makes a new db by coping the current one """
-        new_filename = self.filename[:7] + str(season_num) + self.filename[-3:]  # follows format of `season-[num].db`
+        # follows format provided
+        new_filename = self.file_name_format.format(season_num)
         copy(self.filename, new_filename)
         self.conn = sqlite3.connect(new_filename)
         self.filename = new_filename

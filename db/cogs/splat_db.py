@@ -1,13 +1,13 @@
 from db.cogs import db_strings
-from db.cogs.database import Database
+from db.cogs.database import Database, DB_FILE_BASE
 from modules.power_level import Team, Result
 import time
 
 
 class SplatoonDB(Database):
 
-    def __init__(self, file_name: str):
-        super(SplatoonDB, self).__init__(db_filename=file_name)
+    def __init__(self, file_name: str, file_format: str):
+        super(SplatoonDB, self).__init__(db_filename=file_name, file_format=file_format)
         self.init_season()
 
     def init_season(self):
@@ -19,21 +19,29 @@ class SplatoonDB(Database):
         self.conn.commit()
 
     def init_new_season(self, server_id: int):
-        new_season_num = int(self.filename[7:8]) + 1  # Gets the current season and adds 1 to it
+        current_settings = self.execute_query(db_strings.GET_SETTINGS, server_id)
+        current_season = current_settings[0][3]
+        current_start_time = current_settings[0][4]
+        new_season_num = current_season + 1
         current_time = int(time.time())
 
+        # last update of old season table
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (current_season, current_start_time, current_time,
+                                                             server_id))
+
+        # starting new table
         super(SplatoonDB, self).start_new_season(new_season_num)
         self.execute_query_no_arg(db_strings.DROP_PLAYER_TABLE)  # Drops all tables other than settings & players
         self.execute_query_no_arg(db_strings.DROP_TEAM_TABLE)
         self.execute_query_no_arg(db_strings.DROP_SCRIM_TABLE)
 
         # Updating seasons table
-        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, current_time, None, server_id))
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, current_time, 0, server_id))
 
         # Inits any dropped tables
         self.init_season()
 
-    def purge_players(self, server_members: list):  # TODO add purge for players table
+    def purge_players(self, server_members: list):
         # Get rid of all players in the Profiles db but not in the server
         removed_players = []
         player_ids = self.execute_query_no_arg(db_strings.GET_ALL_PROFILES_PLAYER_ID)
@@ -46,18 +54,20 @@ class SplatoonDB(Database):
 
     def update_season_end(self, server_id: int):
         # Disables or enables the season
-        season_end_status = self.execute_query(db_strings.GET_SETTINGS, ("season_end", server_id))
+        season_end_status = self.execute_query(db_strings.GET_SETTINGS, server_id)
+        season_end_status = season_end_status[0][5]
 
-        if season_end_status is None:
+        if season_end_status is 0:
             end_time = int(time.time())
         else:
-            end_time = None
+            end_time = 0
         self.execute_commit_query(db_strings.UPDATE_SEASON_END, (end_time, server_id))
         self.conn.commit()
 
     def get_next_team_id(self, server_id: int):
         # returns the next scrim_id in the db
-        last_team_id = self.execute_query(db_strings.GET_SETTINGS, ("prev_team_id", server_id))
+        last_team_id = self.execute_query(db_strings.GET_SETTINGS, server_id)
+        last_team_id = last_team_id[0][2]
         next_team_id = last_team_id + 1
         self.execute_commit_query(db_strings.UPDATE_LAST_SCRIM, (next_team_id, server_id))
 

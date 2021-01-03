@@ -7,17 +7,17 @@ import asyncio
 import config
 from modules import checks
 import glob
-from db.cogs.splat_db import SplatoonDB
+from db.cogs.splat_db import SplatoonDB, db_strings
 from db.cogs.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff"]
 
 
 def get_db_file():
     # Gets the most recently used db file from the db folder
-    list_of_files = glob.glob("*.db")
+    list_of_files = glob.glob(DB_FILE_BASE + "*.db")
     if len(list_of_files) == 0:
         latest_file = DB_FILE_BASE + "season-0.db"
     else:
@@ -37,7 +37,7 @@ class LPBot(commands.Bot):
         super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
                          intents=intents)
         self.session = None
-        self.db = SplatoonDB(file_name=get_db_file())
+        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + "season-{}.db")
 
         for e in extensions:
             self.load_extension(e)
@@ -71,6 +71,10 @@ class LPBot(commands.Bot):
                     os.remove(f)
             print("[LPBot] Deleted all old files")
             await asyncio.sleep(300)  # removes every 5 min/300 sec
+
+    async def on_guild_join(self, guild):
+        guild_id = guild.id
+        self.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0))
 
     async def on_ready(self):
         print("[LPBot] Connected")

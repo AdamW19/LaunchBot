@@ -58,7 +58,7 @@ def def_val():
 
 def parse_code_format(code: str):
     """ Converts code to a printable list """
-    if len(code) % 4 == 0:
+    if len(code) % 4 != 0:
         code_dict = {"error": "Invalid input -- len(code) not divisible by 4"}
         return code_dict
 
@@ -83,7 +83,7 @@ def parse_code_format(code: str):
 
 def parse_code_dict(code: str):
     """ Converts code to a machine readable dictionary """
-    if len(code) % 4 == 0:
+    if len(code) % 4 != 0:
         code_dict = {"error": "Invalid input -- len(code) not divisible by 4"}
         return code_dict
 
