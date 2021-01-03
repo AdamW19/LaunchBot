@@ -1,5 +1,5 @@
-from db import db_strings
-from db.database import Database
+from db.cogs import db_strings
+from db.cogs.database import Database
 from modules.power_level import Team, Result
 import time
 

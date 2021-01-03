@@ -2,12 +2,14 @@ import sqlite3
 from sqlite3 import Error
 from shutil import copy
 
+DB_FILE_BASE = "/db/"
+
 
 class Database:
     def __init__(self, db_filename: str):
         try:
             self.conn = sqlite3.connect(db_filename)
-            self.filename = db_filename
+            self.filename = DB_FILE_BASE + db_filename
         except Error as e:
             print(e)
 
