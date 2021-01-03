@@ -25,6 +25,7 @@ class Staff(Cog):
 
     @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["change", "modify", "staff"])
     async def settings(self, ctx):
+        # Staff help
         embed = discord.Embed(title="Settings Help", color=config.embed_color, description="Alias for command are "
                                                                                            "`change`, `modify`, "
                                                                                            "`staff`, and `settings`.")
@@ -32,7 +33,8 @@ class Staff(Cog):
                                                "don't provide a valid [nkitten.net]("
                                                "http://nkitten.net/splatoon2/random/) code as an argument, "
                                                "the bot will print out the current map pool. Otherwise, it will update "
-                                               "the current map pool according to the given code.", inline=False)
+                                               "the current map pool according to the given code and send the updated"
+                                               "map pool to a provided channel.", inline=False)
         embed.add_field(name="Season", value="The subcommand for season is `draft` and `launchpoint`.\n "
                                              "You can provide `pause`, `timeout`, `reopen`, or `open` as an argument "
                                              "to temporarily close or to reopen the season.\n "
@@ -40,30 +42,35 @@ class Staff(Cog):
                                              "a season.", inline=False)
         embed.add_field(name="Eggs", value="Type `l?tenta` or `l?tent` for the best weapon", inline=False)
 
-        embed.set_footer(text="Remember, you must have the Staff role to run these commands. ")
+        embed.set_footer(text="Remember, you must have the Staff role to run these commands.")
 
         await ctx.send(embed=embed)
 
     @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["map-pool", "map", "pool"])
     async def mappool(self, ctx, *args):
+        # if no arguments given, get the current map list from the db
         if len(args) == 0:
             map_list = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
             map_list = map_list[0][1]
             map_dict = code_parser.parse_code_dict(map_list)
             map_str = code_parser.gen_maplist_str(map_dict)
+            map_print = "```" + map_str + "```"  # 3 backticks to ensure formatting
 
+            # If there's no maplist set or if the maplist is invalid, prompt to provide new maplist
             if len(map_list) is 0 or "error" in map_dict:
                 await ctx.send(":x: No maplist set! Please set a maplist by providing one with this command. Use "
                                "http://nkitten.net/splatoon2/random/ to generate a maplist code.")
             else:
                 await ctx.send("Current maplist:")
-                await ctx.send("```" + map_str + "```")
+                await ctx.send(map_print)
+        # If argument was givenm check to make sure it's a valid map list
         elif len(args) == 1:
             check = code_parser.parse_code_dict(args[0])
             if "error" in check:
                 await ctx.send(":x: Invalid map list. Please try again.")
                 return
 
+            # if so, save it in db. also print updated maplist out to current channel and maplist channel
             maplist_print = "```" + code_parser.gen_maplist_str(check) + "```"
             self.bot.db.execute_commit_query(db_strings.UPDATE_SETTING_MAPLIST, (args[0], ctx.guild.id))
             await ctx.send(":white_check_mark: Successfully updated the maplist:")
@@ -75,6 +82,7 @@ class Staff(Cog):
 
     @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["draft", "laucnhpoint"])
     async def season(self, ctx):
+        # Season specific help
         await ctx.send(":x: You must provide an argument to stop the season or to start the season:\n"
                        "To pause the season, provide `pause`, `timeout`, `reopen`, or `open` to pause/continue the "
                        "season.\n "
@@ -83,6 +91,7 @@ class Staff(Cog):
 
     @season.group(case_insensitive=True, invoke_without_command=True, aliases=["pause", "timeout", "reopen", "open"])
     async def toggle_season(self, ctx):
+        # Toggle status, and make sure it was saved into the db
         self.bot.db.update_season_end(ctx.guild.id)
         season_status = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
         season_status = season_status[0][5]  # if end time is 0, it reopened; otherwise it closed
@@ -135,6 +144,7 @@ class Staff(Cog):
 
     @commands.command(name="tent", aliases=["tenta"])
     async def best_weapon(self, ctx):
+        # mako zones best zones
         await ctx.send("https://cdn.discordapp.com/attachments/743901312718209154/791250962798215198/video0.mov")
 
 

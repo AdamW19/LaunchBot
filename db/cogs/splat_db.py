@@ -16,16 +16,19 @@ class SplatoonDB(Database):
         self.execute_query_no_arg(db_strings.INIT_TEAM_TABLE)
         self.execute_query_no_arg(db_strings.INIT_SCRIM_TABLE)
         self.execute_query_no_arg(db_strings.INIT_SETTING_TABLE)
+
+        self.execute_commit_query(db_strings.INSERT_PROFILE, (98101114116111, "BERTO-WAS-HERE"))  # easter egg 🥚
         self.conn.commit()
 
     def init_new_season(self, server_id: int):
+        # Get stuff from old season for final update
         current_settings = self.execute_query(db_strings.GET_SETTINGS, server_id)
         current_season = current_settings[0][3]
         current_start_time = current_settings[0][4]
         new_season_num = current_season + 1
         current_time = int(time.time())
 
-        # last update of old season table
+        # last update of old season table, so we have end_time correct
         self.execute_commit_query(db_strings.UPDATE_SEASON, (current_season, current_start_time, current_time,
                                                              server_id))
 
