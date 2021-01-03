@@ -16,6 +16,7 @@ class SplatoonDB(Database):
         self.execute_query_no_arg(db_strings.INIT_TEAM_TABLE)
         self.execute_query_no_arg(db_strings.INIT_SCRIM_TABLE)
         self.execute_query_no_arg(db_strings.INIT_SETTING_TABLE)
+        self.conn.commit()
 
     def init_new_season(self, server_id: int):
         new_season_num = int(self.filename[7:8]) + 1  # Gets the current season and adds 1 to it
@@ -27,7 +28,7 @@ class SplatoonDB(Database):
         self.execute_query_no_arg(db_strings.DROP_SCRIM_TABLE)
 
         # Updating seasons table
-        self.execute_query_nr(db_strings.UPDATE_SEASON, (new_season_num, current_time, None, server_id))
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, current_time, None, server_id))
 
         # Inits any dropped tables
         self.init_season()
@@ -38,8 +39,9 @@ class SplatoonDB(Database):
         player_ids = self.execute_query_no_arg(db_strings.GET_ALL_PROFILES_PLAYER_ID)
         for player in player_ids:
             if player not in server_members:
-                self.execute_query_nr(db_strings.DELETE_PROFILE, player)
+                self.execute_commit_query(db_strings.DELETE_PROFILE, player)
                 removed_players.append(player)
+        self.conn.commit()
         return removed_players  # return what players we removed
 
     def update_season_end(self, server_id: int):
@@ -50,13 +52,14 @@ class SplatoonDB(Database):
             end_time = int(time.time())
         else:
             end_time = None
-        self.execute_query_nr(db_strings.UPDATE_SEASON_END, (end_time, server_id))
+        self.execute_commit_query(db_strings.UPDATE_SEASON_END, (end_time, server_id))
+        self.conn.commit()
 
     def get_next_team_id(self, server_id: int):
         # returns the next scrim_id in the db
         last_team_id = self.execute_query(db_strings.GET_SETTINGS, ("prev_team_id", server_id))
         next_team_id = last_team_id + 1
-        self.execute_query_nr(db_strings.UPDATE_LAST_SCRIM, (next_team_id, server_id))
+        self.execute_commit_query(db_strings.UPDATE_LAST_SCRIM, (next_team_id, server_id))
 
         return next_team_id
 
@@ -78,8 +81,8 @@ class SplatoonDB(Database):
                 player_row = self.execute_query(db_strings.GET_PLAYER, player_id)
                 player_game_wins = player_row[5] + alpha_win
                 player_game_loses = player_row[6] + alpha_loss
-                self.execute_query_nr(db_strings.UPDATE_PLAYER_SET_STAT, (player_game_wins, player_game_loses,
-                                                                          player_id))
+                self.execute_commit_query(db_strings.UPDATE_PLAYER_SET_STAT, (player_game_wins, player_game_loses,
+                                                                              player_id))
 
         for player in beta_team.players:
             if not player.active_sub:
@@ -88,10 +91,11 @@ class SplatoonDB(Database):
                 player_row = self.execute_query(db_strings.GET_PLAYER, player_id)
                 player_game_wins = player_row[5] + beta_win
                 player_game_loses = player_row[6] + beta_loss
-                self.execute_query_nr(db_strings.UPDATE_PLAYER_SET_STAT, (player_game_wins, player_game_loses,
-                                                                          player_id))
+                self.execute_commit_query(db_strings.UPDATE_PLAYER_SET_STAT, (player_game_wins, player_game_loses,
+                                                                              player_id))
+        self.conn.commit()
 
-    def match_finish(self, alpha_team: Team, beta_team: Team, scrim_id: int, result: Result):
+def match_finish(self, alpha_team: Team, beta_team: Team, scrim_id: int, result: Result):
         alpha_win = alpha_loss = beta_win = beta_loss = 0
         if result is Result.ALPHA_WIN:
             alpha_win = 1
@@ -105,24 +109,24 @@ class SplatoonDB(Database):
             player_rank_mu = player.rating.mu
             player_rank_sigma = player.rating.sigma
 
-            self.execute_query_nr(db_strings.UPDATE_PLAYER_RANK, (player_rank_mu, player_rank_sigma, player_id))
+            self.execute_commit_query(db_strings.UPDATE_PLAYER_RANK, (player_rank_mu, player_rank_sigma, player_id))
 
             player_row = self.execute_query(db_strings.GET_PLAYER, player_id)
             player_game_wins = player_row[3] + alpha_win
             player_game_loses = player_row[4] + alpha_loss
-            self.execute_query_nr(db_strings.UPDATE_PLAYER_GAME_STAT, (player_game_wins, player_game_loses, player_id))
+            self.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT, (player_game_wins, player_game_loses, player_id))
 
         for player in beta_team.players:
             player_id = player.player_id
             player_rank_mu = player.rating.mu
             player_rank_sigma = player.rating.sigma
 
-            self.execute_query_nr(db_strings.UPDATE_PLAYER_RANK, (player_rank_mu, player_rank_sigma, player_id))
+            self.execute_commit_query(db_strings.UPDATE_PLAYER_RANK, (player_rank_mu, player_rank_sigma, player_id))
 
             player_row = self.execute_query(db_strings.GET_PLAYER, player_id)
             player_game_wins = player_row[3] + beta_win
             player_game_loses = player_row[4] + beta_loss
-            self.execute_query_nr(db_strings.UPDATE_PLAYER_GAME_STAT, (player_game_wins, player_game_loses, player_id))
+            self.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT, (player_game_wins, player_game_loses, player_id))
 
         scrim_row = self.execute_query(db_strings.GET_SCRIM, scrim_id)
         alpha_score = scrim_row[3]
@@ -134,3 +138,5 @@ class SplatoonDB(Database):
             beta_score += 1
 
         self.execute_query(db_strings.UPDATE_SCRIM_SCORE, (alpha_score, beta_score, scrim_id))
+
+        self.conn.commit()

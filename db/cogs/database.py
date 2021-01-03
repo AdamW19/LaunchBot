@@ -1,7 +1,7 @@
 import sqlite3
 from shutil import copy
 
-DB_FILE_BASE = "../"
+DB_FILE_BASE = "db/"
 
 
 class Database:
@@ -10,20 +10,28 @@ class Database:
             import os
             with open(path, 'a'):
                 os.utime(path, None)
+            return path
 
         try:
             self.conn = sqlite3.connect(db_filename)
         except sqlite3.OperationalError:  # If error happens due to filename not existing, make the file and try again
             self.conn = sqlite3.connect(touch(db_filename))
-        self.filename = DB_FILE_BASE + db_filename
+        self.filename = db_filename
 
-    def execute_query_nr(self, unformatted_query: str, arguments: tuple):
+    def execute_commit_query(self, unformatted_query: str, arguments: tuple):
         """ Does a query but doesn't return anything """
+        if not isinstance(arguments, tuple):
+            arguments = (arguments,)
+
         cursor = self.conn.cursor()
         cursor.execute(unformatted_query, arguments)
+        self.conn.commit()
 
     def execute_query(self, unformatted_query: str, arguments: tuple):
         """ Queries and returns the rows """
+        if not isinstance(arguments, tuple):
+            arguments = (arguments,)
+
         cursor = self.conn.cursor()
         cursor.execute(unformatted_query, arguments)
         rows = cursor.fetchall()
@@ -38,6 +46,8 @@ class Database:
 
     def add_row(self, unformatted_query: str, arguments: tuple):
         """ Returns the row id that was just added """
+        if not isinstance(arguments, tuple):
+            arguments = (arguments,)
         cur = self.conn.cursor()
         cur.execute(unformatted_query, arguments)
         self.conn.commit()
