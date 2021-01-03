@@ -20,38 +20,39 @@ INIT_PLAYER_TABLE = """CREATE TABLE IF NOT EXISTS Player (
                       );"""
 
 INIT_TEAM_TABLE = """CREATE TABLE IF NOT EXISTS Team ( 
-                  team_id INTEGER PRIMARY KEY, 
-                  player_id INTEGER NOT NULL, 
-                  is_sub INTEGER NOT NULL, 
-                  FOREIGN KEY (player_id)
-                  REFERENCES Player (player_id)
-                  ON DELETE NO ACTION
-                  ON UPDATE CASCADE
-                  );"""
+                     team_id INTEGER PRIMARY KEY, 
+                     player_id INTEGER NOT NULL, 
+                     is_sub INTEGER NOT NULL, 
+                     FOREIGN KEY (player_id)
+                        REFERENCES Player (player_id)
+                        ON DELETE NO ACTION
+                        ON UPDATE CASCADE
+                     );"""
 
 INIT_SCRIM_TABLE = """CREATE TABLE IF NOT EXISTS Scrim (
                       scrim_id INTEGER PRIMARY KEY,
-                      winning_team INTEGER, 
-                      losing_team INTEGER,
-                      winner_score INTEGER, 
-                      loser_score INTEGER,
-                      FOREIGN KEY (winning_team) 
-                      REFERENCES Team (team_id) 
-                      ON DELETE NO ACTION 
-                      ON UPDATE CASCADE, 
-                      FOREIGN KEY (losing_team) 
-                      REFERENCES Team (team_id) 
-                      ON DELETE NO ACTION 
-                      ON UPDATE CASCADE
+                      alpha_team INTEGER, 
+                      beta_team INTEGER,
+                      alpha_score INTEGER, 
+                      beta_score INTEGER,
+                      FOREIGN KEY (alpha_team) 
+                        REFERENCES Team (team_id) 
+                        ON DELETE NO ACTION 
+                        ON UPDATE CASCADE, 
+                      FOREIGN KEY (beta_team) 
+                        REFERENCES Team (team_id) 
+                        ON DELETE NO ACTION 
+                        ON UPDATE CASCADE
                       );"""
 
 INIT_SETTING_TABLE = """CREATE TABLE IF NOT EXISTS Settings (
-                     server_id INTEGER PRIMARY KEY, 
-                     map_list TEXT NOT NULL,
-                     season_num INTEGER NOT NULL,
-                     season_start INTEGER NOT NULL,
-                     season_end INTEGER NOT NULL
-                     );"""
+                        server_id INTEGER PRIMARY KEY, 
+                        map_list TEXT NOT NULL,
+                        prev_team_id INTEGER,
+                        season_num INTEGER NOT NULL,
+                        season_start INTEGER NOT NULL,
+                        season_end INTEGER NOT NULL
+                        );"""
 
 INSERT_PROFILE = """INSERT INTO Profile(player_id, fc)
                     VALUES (?, ?)"""
@@ -63,8 +64,11 @@ INSERT_PLAYER = """INSERT INTO Player(player_id, rank_mu, rank_sigma, num_game_w
 INSERT_TEAM = """INSERT INTO Team(team_id, player_id, is_sub)
                  VALUES (?, ?, ?)"""
 
-INSERT_SCRIM = """INSERT INTO Scrim(scrim_id, winning_team, losing_team, winner_score, loser_score)
+INSERT_SCRIM = """INSERT INTO Scrim(scrim_id, alpha_team, beta_team, alpha_score, beta_score)
                   VALUES(?, ?, ?, ?, ?)"""
+
+INSERT_SETTING = """INSERT INTO Settings(server_id, map_list, prev_team_id, season_num, season_start, season_end)
+                    VALUES(?, ?, ?, ?, ?, ?)"""
 
 GET_ALL_PROFILES_PLAYER_ID = """SELECT player_id FROM Profile"""
 
@@ -107,7 +111,7 @@ UPDATE_TEAM_SUB = """UPDATE Team
                      WHERE team_id = ? AND player_id = ?"""
 
 UPDATE_SCRIM_SCORE = """UPDATE Scrim
-                        SET winner_score = ?,
+                        SET alpha_score = ?,
                             loser_score = ?
                         WHERE scrim_id = ?"""
 
@@ -123,6 +127,10 @@ UPDATE_SEASON = """UPDATE Settings
 
 UPDATE_SEASON_END = """UPDATE Settings
                        SET season_end = ?
+                       WHERE server_id = ?"""
+
+UPDATE_LAST_SCRIM = """UPDATE Settings
+                       SET prev_team_id = ?
                        WHERE server_id = ?"""
 
 DELETE_PROFILE = """DELETE FROM Profile
