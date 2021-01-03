@@ -17,7 +17,7 @@ INIT_PLAYER_TABLE = """CREATE TABLE IF NOT EXISTS Player (
                            REFERENCES Profile (player_id)
                            ON DELETE CASCADE 
                            ON UPDATE CASCADE 
-                      );"""
+                      );"""  # TODO make player table independent b/c a player may not have a profile
 
 INIT_TEAM_TABLE = """CREATE TABLE IF NOT EXISTS Team ( 
                      team_id INTEGER PRIMARY KEY, 

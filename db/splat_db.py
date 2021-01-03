@@ -28,7 +28,7 @@ class SplatoonDB(Database):
         # Updating seasons table
         self.execute_query_nr(db_strings.UPDATE_SEASON, (new_season_num, current_time, None, server_id))
 
-    def purge_players(self, server_members: list):
+    def purge_players(self, server_members: list):  # TODO add purge for players table
         # Get rid of all players in the Profiles db but not in the server
         removed_players = []
         player_ids = self.execute_query_no_arg(db_strings.GET_ALL_PROFILES_PLAYER_ID)
