@@ -1,4 +1,7 @@
+import discord
 from discord.ext import commands
+
+import config
 from modules import embeds
 
 
@@ -57,11 +60,26 @@ class Help(commands.Cog):
         embeds.add_help_embed_footer_links(help_embed, self.bot)
         await ctx.author.send(embed=help_embed)
         await ctx.send(":white_check_mark: " + ctx.author.mention +
-                       ", the full help for " + self.bot.user.name + " has been DMed to you to prevent spam.")
+                       ", the full help for " + self.bot.user.name + " has been DMed to you.")
 
     @commands.command()
-    async def hello(self, ctx):
-        await ctx.send("Hello, World!")
+    async def ping(self, ctx):
+        await ctx.send('Pong! Took {0} ms'.format(round(self.bot.latency * 1000, 0)))
+
+    @commands.command()
+    async def special_thanks(self, ctx):
+        embed = discord.Embed(title="Special Thanks", color=config.embed_color)
+        embed.add_field(name="Notice", value="We would like to thank [splatoon2.ink](https://splatoon2.ink/) for the "
+                                             "rotation API. " + self.bot.user.name + " is written in Python 3 with "
+                                             "[discord.py](https://discordpy.readthedocs.io/en/latest/) and "
+                                             "SQLite. Player power levels uses "
+                                             "[Trueskill™](http://research.microsoft.com/en-us/projects/trueskill/). "
+                                             "Trueskill™ is a registered trademark of the Microsoft Corporation.\n"
+                                             "All rights reserved.", inline=False)
+        embed.add_field(name="Github Repo",
+                        value="Visit the code for " + self.bot.user.name + " [here.](https://github.com/AdamW19"
+                                                                           "/LaunchBot)", inline=False)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

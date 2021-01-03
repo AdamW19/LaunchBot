@@ -1,16 +1,28 @@
 import discord
 import aiohttp
 import traceback
-import sys
 from discord.ext import commands
 import os
 import asyncio
 import config
 from modules import checks
+import glob
+from db.cogs.splat_db import SplatoonDB, db_strings
+from db.cogs.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff"]
+
+
+def get_db_file():
+    # Gets the most recently used db file from the db folder
+    list_of_files = glob.glob(DB_FILE_BASE + "*.db")
+    if len(list_of_files) == 0:
+        latest_file = DB_FILE_BASE + "season-0.db"
+    else:
+        latest_file = max(list_of_files, key=os.path.getctime)
+    return latest_file
 
 
 class LPBot(commands.Bot):
@@ -25,11 +37,16 @@ class LPBot(commands.Bot):
         super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
                          intents=intents)
         self.session = None
+        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + "season-{}.db")
 
         for e in extensions:
             self.load_extension(e)
 
         self.loop.create_task(self.garbage_collector())
+
+        # Assigns self.session an aiohttp session because you need to assign it async
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.assign_session())
 
     # Below 2 methods properly close the session once the bot's killed
     def __del__(self):
@@ -39,6 +56,10 @@ class LPBot(commands.Bot):
     async def close(self):
         if self.session is not None:
             await self.session.close()
+
+    async def assign_session(self):
+        if self.session is None:
+            self.session = aiohttp.ClientSession(headers=config.header)
 
     async def garbage_collector(self):
         """Removes all .gif and .png files from gif generation for lobby/rotation info"""
@@ -51,9 +72,12 @@ class LPBot(commands.Bot):
             print("[LPBot] Deleted all old files")
             await asyncio.sleep(300)  # removes every 5 min/300 sec
 
+    async def on_guild_join(self, guild):
+        guild_id = guild.id
+        self.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0))
+
     async def on_ready(self):
         print("[LPBot] Connected")
-        self.session = aiohttp.ClientSession(headers=config.header)
         await self.get_channel(config.online_logger_id).send("*Connected to Discord*")
         await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing,
                                                              name="wahoo zones | l?help"))
@@ -93,8 +117,8 @@ class LPBot(commands.Bot):
                                "to be able to run `" + ctx.invoked_with +
                                "` you must be the owner of this bot.")
             else:
-                await ctx.send(":warning: Either this command is disabled, you are not authorized to run this command, "
-                               "or this command is not being run in the proper context.")
+                await ctx.send(":warning: Either you are not authorized to run this command or this command is not "
+                               "being run in the proper context.")
         elif isinstance(error, discord.ext.commands.BadArgument):
             await ctx.send(":x: Your command arguments could not be interpreted, please try again (Did you forget a"
                            " \" character?).")
