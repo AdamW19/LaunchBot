@@ -1,17 +1,21 @@
 import sqlite3
-from sqlite3 import Error
 from shutil import copy
 
-DB_FILE_BASE = "/db/"
+DB_FILE_BASE = "../"
 
 
 class Database:
     def __init__(self, db_filename: str):
+        def touch(path):  # Makes an empty file because connect requires the file to exist
+            import os
+            with open(path, 'a'):
+                os.utime(path, None)
+
         try:
             self.conn = sqlite3.connect(db_filename)
-            self.filename = DB_FILE_BASE + db_filename
-        except Error as e:
-            print(e)
+        except sqlite3.OperationalError:  # If error happens due to filename not existing, make the file and try again
+            self.conn = sqlite3.connect(touch(db_filename))
+        self.filename = DB_FILE_BASE + db_filename
 
     def execute_query_nr(self, unformatted_query: str, arguments: tuple):
         """ Does a query but doesn't return anything """

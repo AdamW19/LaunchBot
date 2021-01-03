@@ -8,6 +8,7 @@ class SplatoonDB(Database):
 
     def __init__(self, file_name: str):
         super(SplatoonDB, self).__init__(db_filename=file_name)
+        self.init_season()
 
     def init_season(self):
         self.execute_query_no_arg(db_strings.INIT_PROFILE_TABLE)
