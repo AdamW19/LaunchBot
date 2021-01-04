@@ -45,19 +45,19 @@ class Profiles(commands.Cog):
     @commands.check(checks.user_is_developer)
     async def debug(self, ctx, *args):
         # TODO remove command once we're in production
-        player_id = ctx.author.id
-        switch = args[0]
-        rank_mu = args[1]
-        rank_sigma = args[2]
-        num_game_win = args[3]
-        num_game_loss = args[4]
-        num_set_win = args[5]
-        num_set_loss = args[6]
+        player_id = args[0]
+        switch = args[1]
+        rank_mu = args[2]
+        rank_sigma = args[3]
+        num_game_win = args[4]
+        num_game_loss = args[5]
+        num_set_win = args[6]
+        num_set_loss = args[7]
 
-        if switch is "new":
+        if switch == "new":
             self.db.execute_commit_query(db_strings.INSERT_PLAYER, (player_id, rank_mu, rank_sigma, num_game_win,
                                                                     num_game_loss, num_set_win, num_set_loss))
-        elif switch is "update":
+        elif switch == "update":
             self.db.execute_commit_query("UPDATE Player SET rank_mu = ?, rank_sigma = ?, num_game_win = ?, "
                                          "num_game_loss = ?, num_set_win = ?, num_set_loss = ? WHERE player_id = ? ",
                                          (rank_mu, rank_sigma, num_game_win, num_game_loss, num_set_win,
@@ -126,8 +126,8 @@ class Profiles(commands.Cog):
             total_games = num_games_won + num_games_lost
             total_sets = num_sets_won + num_sets_lost
 
-            if total_games > MATCH_THRESHOLD:  # Making sure the player has enough games played before showing rating
-                player_rating = round(player[1], 2)  # round to 2 decimal places
+            if total_games >= MATCH_THRESHOLD:  # Making sure the player has enough games played before showing rating
+                player_rating = round(float(player[1]), 2)  # round to 2 decimal places
             else:
                 player_rating = "Play {} more game(s)\nto view rank.".format(MATCH_THRESHOLD - total_games)
 

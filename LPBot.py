@@ -12,7 +12,7 @@ from db.cogs.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard"]
 
 
 def get_db_file():
@@ -43,27 +43,28 @@ class LPBot(commands.Bot):
         for e in extensions:
             self.load_extension(e)
 
+        # Deletes any .gifs or .pngs made during gif generation for rotation commands
         self.loop.create_task(self.garbage_collector())
 
         # Assigns self.session an aiohttp session because you need to assign it async
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.assign_session())
+        self.loop.create_task(self.assign_session())
 
     # Below 2 methods properly close the session once the bot's killed
     def __del__(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.close())
+        self.loop.run_until_complete(self.close())
 
     async def close(self):
         if self.session is not None:
             await self.session.close()
 
     async def assign_session(self):
+        # you need to make an aiohttp client session async, which is why this is here
+        await self.wait_until_ready()
         if self.session is None:
             self.session = aiohttp.ClientSession(headers=config.header)
 
     async def garbage_collector(self):
-        """Removes all .gif and .png files from gif generation for lobby/rotation info"""
+        # Removes all .gif and .png files from gif generation for lobby/rotation info
         await self.wait_until_ready()
         while not self.is_closed():
             print("[LPBot] Deleting old files...")
@@ -75,7 +76,8 @@ class LPBot(commands.Bot):
 
     async def on_guild_join(self, guild):
         guild_id = guild.id
-        self.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0))
+        # setting table is <guild id> <map list> <last team id> <leaderboard msg> <curr season> <start> <end>
+        self.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0, 0))
 
     async def on_ready(self):
         print("[LPBot] Connected")
