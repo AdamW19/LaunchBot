@@ -26,7 +26,7 @@ class Leaderboard(Cog):
         await self.bot.wait_until_ready()
         await asyncio.sleep(5)  # Sometimes the bot won't actually be ready, so an extra 5 sec helps
         while not self.bot.is_closed():
-            print("[LPBot] Updating leaderboard...")
+            print("[LPBot] Updating global leaderboard...")
 
             db_settings = self.db.execute_query(db_strings.GET_SETTINGS, config.launchpoint_server_id)[0]
             db_curr_season = db_settings[4]

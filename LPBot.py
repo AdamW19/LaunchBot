@@ -36,8 +36,7 @@ class LPBot(commands.Bot):
         intents.guilds = True
         intents.reactions = True
 
-        super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
-                         intents=intents)
+        super().__init__(command_prefix=config.prefix, case_insensitive=True, intents=intents)
         self.session = None
         self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + DB_FILENAME_FMT)
 
@@ -106,9 +105,8 @@ class LPBot(commands.Bot):
                 and not hasattr("on_error", ctx.command):
             await self.send_unexpected_error(ctx, error)
         elif isinstance(error, discord.ext.commands.CommandNotFound):
-            if config.send_invalid_command:
-                await ctx.send(":x: Sorry, `" + ctx.invoked_with +
-                               "` is not a valid command.  Type `l?help` for a list of commands.")
+            await ctx.send(":x: Sorry, `" + ctx.invoked_with + "` is not a valid command.  Type `l?help` for a list of "
+                                                               "commands.")
             if ctx.guild is None:
                 await self.get_channel(config.online_logger_id).send("Invalid command received from `" + ctx.author.name
                                                                      + "`: " + ctx.message.content)
