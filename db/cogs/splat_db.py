@@ -16,6 +16,10 @@ class SplatoonDB(Database):
         self.execute_query_no_arg(db_strings.INIT_TEAM_TABLE)
         self.execute_query_no_arg(db_strings.INIT_SCRIM_TABLE)
         self.execute_query_no_arg(db_strings.INIT_SETTING_TABLE)
+
+        if self.execute_query(db_strings.GET_PROFILE, 98101114116111) is None:
+            self.execute_commit_query(db_strings.INSERT_PROFILE, (98101114116111, "BERTO-WAS-HERE"))  # easter egg 🥚
+
         self.conn.commit()
 
     def init_new_season(self, server_id: int):
