@@ -5,7 +5,7 @@ import config
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
-from db.cogs import db_strings
+from db.src import db_strings
 from modules import code_parser
 
 
@@ -140,7 +140,7 @@ class Staff(Cog):
         # TODO remove debug command
         guild_id = ctx.guild.id
         current_time = int(time.time())
-        self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, current_time, 0, 0))
+        self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, current_time, 0))
 
     @commands.command(name="tent", aliases=["tenta"])
     async def best_weapon(self, ctx):

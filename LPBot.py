@@ -7,19 +7,21 @@ import asyncio
 import config
 from modules import checks
 import glob
-from db.cogs.splat_db import SplatoonDB, db_strings
-from db.cogs.database import DB_FILE_BASE
+from db.src.splat_db import SplatoonDB, db_strings
+from db.src.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard"]
+
+DB_FILENAME_FMT = "season-{}.db"
 
 
 def get_db_file():
     # Gets the most recently used db file from the db folder
     list_of_files = glob.glob(DB_FILE_BASE + "*.db")
     if len(list_of_files) == 0:
-        latest_file = DB_FILE_BASE + "season-0.db"
+        latest_file = DB_FILE_BASE + DB_FILENAME_FMT.format(0)
     else:
         latest_file = max(list_of_files, key=os.path.getctime)
     return latest_file
@@ -34,36 +36,36 @@ class LPBot(commands.Bot):
         intents.guilds = True
         intents.reactions = True
 
-        super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
-                         intents=intents)
+        super().__init__(command_prefix=config.prefix, case_insensitive=True, intents=intents)
         self.session = None
-        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + "season-{}.db")
+        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + DB_FILENAME_FMT)
 
         print("[LPBot] Loading extensions...")
         for e in extensions:
             self.load_extension(e)
 
+        # Deletes any .gifs or .pngs made during gif generation for rotation commands
         self.loop.create_task(self.garbage_collector())
 
         # Assigns self.session an aiohttp session because you need to assign it async
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.assign_session())
+        self.loop.create_task(self.assign_session())
 
-    # Below 2 methods properly close the session once the bot's killed
+    # Below 2 methods properly close the session once the bot is killed
     def __del__(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.close())
+        self.loop.run_until_complete(self.close())
 
     async def close(self):
         if self.session is not None:
             await self.session.close()
 
     async def assign_session(self):
+        # you need to make an aiohttp client session async, which is why this is here
+        await self.wait_until_ready()
         if self.session is None:
             self.session = aiohttp.ClientSession(headers=config.header)
 
     async def garbage_collector(self):
-        """Removes all .gif and .png files from gif generation for lobby/rotation info"""
+        # Removes all .gif and .png files from gif generation for lobby/rotation info
         await self.wait_until_ready()
         while not self.is_closed():
             print("[LPBot] Deleting old files...")
@@ -75,7 +77,8 @@ class LPBot(commands.Bot):
 
     async def on_guild_join(self, guild):
         guild_id = guild.id
-        self.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0))
+        # setting table is <guild id> <map list> <last team id> <leaderboard msg> <curr season> <start> <end>
+        self.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, 0, 0))
 
     async def on_ready(self):
         print("[LPBot] Connected")
@@ -85,7 +88,7 @@ class LPBot(commands.Bot):
 
     async def on_command(self, ctx):
         if ctx.guild is None:
-            await self.get_channel(config.online_logger_id).send( "Command received from `" + ctx.author.name + "`: " +
+            await self.get_channel(config.online_logger_id).send("Command received from `" + ctx.author.name + "`: " +
                                                                   ctx.message.content)
         else:
             await self.get_channel(config.online_logger_id).send("Command received from `" + ctx.author.name + "` on `"
@@ -102,9 +105,8 @@ class LPBot(commands.Bot):
                 and not hasattr("on_error", ctx.command):
             await self.send_unexpected_error(ctx, error)
         elif isinstance(error, discord.ext.commands.CommandNotFound):
-            if config.send_invalid_command:
-                await ctx.send(":x: Sorry, `" + ctx.invoked_with +
-                               "` is not a valid command.  Type `l?help` for a list of commands.")
+            await ctx.send(":x: Sorry, `" + ctx.invoked_with + "` is not a valid command.  Type `l?help` for a list of "
+                                                               "commands.")
             if ctx.guild is None:
                 await self.get_channel(config.online_logger_id).send("Invalid command received from `" + ctx.author.name
                                                                      + "`: " + ctx.message.content)
