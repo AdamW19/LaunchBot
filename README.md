@@ -36,14 +36,15 @@ up a new issue! If you're extra amazing, you're also welcome to do a pull reques
 
 ## Technologies Used/Special Thanks
 Here is a list of the APIs/technologies we used to make LaunchBot:
-- We would like to thank [splatoon2.ink](https://splatoon2.ink/) for the
-rotation API.
 - LaunchBot is written in Python 3 with
 [discord.py](https://discordpy.readthedocs.io/en/latest/) and 
 SQLite. 
 - Player power levels uses [Trueskill™](http://research.microsoft.com/en-us/projects/trueskill/).
 Trueskill™ is a registered trademark of the Microsoft Corporation. All rights reserved.
-- A majority of the rotation commands and the error parsing comes from [ktraw2's Splatbot](https://github.com/ktraw2/SplatBot).
+
+- We would like to thank [splatoon2.ink](https://splatoon2.ink/) for the
+rotation API.
+- A majority of the rotation commands, the help commands, and the error parsing comes from [ktraw2's Splatbot](https://github.com/ktraw2/SplatBot).
 
 # License
 This repo is licensed under the GNU General Public License v3.0. Please visit [the license](LICENSE) for more information.
