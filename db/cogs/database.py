@@ -20,7 +20,7 @@ class Database:
         self.file_name_format = file_format
 
     def execute_commit_query(self, unformatted_query: str, arguments: tuple):
-        """ Does a query but doesn't return anything """
+        """ Does a query commits it, no return """
         if not isinstance(arguments, tuple):
             arguments = (arguments,)
 
