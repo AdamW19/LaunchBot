@@ -5,7 +5,7 @@ import config
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
-from db.cogs import db_strings
+from db.src import db_strings
 from modules import code_parser
 
 

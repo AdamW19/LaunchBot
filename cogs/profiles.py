@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import config
-from db.cogs import db_strings
+from db.src import db_strings
 from modules import checks
 from modules.power_level import MATCH_THRESHOLD
 import re

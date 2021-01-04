@@ -7,7 +7,7 @@ from discord.ext import commands
 from discord.ext.commands import Cog
 
 import config
-from db.cogs import db_strings
+from db.src import db_strings
 from modules.power_level import MATCH_THRESHOLD
 
 MAIN_LEADERBOARD_LIM = 10  # Max amount of players in global leaderboard and in each page for pagination
@@ -27,14 +27,18 @@ class Leaderboard(Cog):
         await asyncio.sleep(5)  # Sometimes the bot won't actually be ready, so an extra 5 sec helps
         while not self.bot.is_closed():
             print("[LPBot] Updating leaderboard...")
+
+            db_settings = self.db.execute_query(db_strings.GET_SETTINGS, config.launchpoint_server_id)[0]
+            db_curr_season = db_settings[4]
+            db_leaderboard = db_settings[3]
+
             leaderboard = self.db.execute_query_no_arg(db_strings.GET_LEADERBOARD)
-            embed = self.gen_leaderboard_embed(leaderboard, 0)
+            embed = self.gen_leaderboard_embed(leaderboard, 0, db_curr_season)
+
             # embed is none iff there's no one on the leaderboard
             if embed is not None:
                 # on first run or on reboot, get the db entry
                 if self.global_lb_mes is None:
-                    db_leaderboard = self.db.execute_query(db_strings.GET_SETTINGS, config.launchpoint_server_id)[0][3]
-
                     # if it doesn't exist, make a new one and safe that as the global leaderboard
                     if db_leaderboard is None or db_leaderboard is 0:
                         self.global_lb_mes = await self.bot.get_channel(config.launchpoint_leaderboard_id).send(
@@ -53,9 +57,12 @@ class Leaderboard(Cog):
         embeds = []
         leaderboard = self.db.execute_query_no_arg(db_strings.GET_LEADERBOARD)
 
+        db_settings = self.db.execute_query(db_strings.GET_SETTINGS, config.launchpoint_server_id)[0]
+        db_curr_season = db_settings[4]
+
         # Makes embeds for pagination, we want 5 10-player sized embeds sorta like the global leaderboard
         for i in range(0, LEADERBOARD_SIZE, MAIN_LEADERBOARD_LIM):
-            embeds.append(self.gen_leaderboard_embed(leaderboard, i))  # TODO fix empty embeds
+            embeds.append(self.gen_leaderboard_embed(leaderboard, i, db_curr_season))  # TODO fix empty embeds
 
         # Sets up pagination, thank you libraries
         paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx=ctx, remove_reactions=True, auto_footer=True)
@@ -66,9 +73,9 @@ class Leaderboard(Cog):
         paginator.add_reaction('⏭️', "last")
         await paginator.run(embeds)
 
-    def gen_leaderboard_embed(self, leaderboard: list, offset: int):
+    def gen_leaderboard_embed(self, leaderboard: list, offset: int, season_num: int):
         position_str = str(offset + 1) + " to " + str(offset + MAIN_LEADERBOARD_LIM)  # Used for title
-        title = "Leaderboard -- Positions " + position_str
+        title = "Season " + str(season_num) + " Leaderboard -- Positions " + position_str
 
         embed = discord.Embed(title=title, timestamp=datetime.datetime.utcnow())
         # FIXME this is kinda sketchy but it works... maybe we should host the icon locally? something to think about

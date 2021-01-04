@@ -7,19 +7,21 @@ import asyncio
 import config
 from modules import checks
 import glob
-from db.cogs.splat_db import SplatoonDB, db_strings
-from db.cogs.database import DB_FILE_BASE
+from db.src.splat_db import SplatoonDB, db_strings
+from db.src.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
 EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard"]
+
+DB_FILENAME_FMT = "season-{}.db"
 
 
 def get_db_file():
     # Gets the most recently used db file from the db folder
     list_of_files = glob.glob(DB_FILE_BASE + "*.db")
     if len(list_of_files) == 0:
-        latest_file = DB_FILE_BASE + "season-0.db"
+        latest_file = DB_FILE_BASE + DB_FILENAME_FMT.format(0)
     else:
         latest_file = max(list_of_files, key=os.path.getctime)
     return latest_file
@@ -37,7 +39,7 @@ class LPBot(commands.Bot):
         super().__init__(command_prefix=config.prefix, description=config.description, case_insensitive=True,
                          intents=intents)
         self.session = None
-        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + "season-{}.db")
+        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + DB_FILENAME_FMT)
 
         print("[LPBot] Loading extensions...")
         for e in extensions:
@@ -49,7 +51,7 @@ class LPBot(commands.Bot):
         # Assigns self.session an aiohttp session because you need to assign it async
         self.loop.create_task(self.assign_session())
 
-    # Below 2 methods properly close the session once the bot's killed
+    # Below 2 methods properly close the session once the bot is killed
     def __del__(self):
         self.loop.run_until_complete(self.close())
 
@@ -87,7 +89,7 @@ class LPBot(commands.Bot):
 
     async def on_command(self, ctx):
         if ctx.guild is None:
-            await self.get_channel(config.online_logger_id).send( "Command received from `" + ctx.author.name + "`: " +
+            await self.get_channel(config.online_logger_id).send("Command received from `" + ctx.author.name + "`: " +
                                                                   ctx.message.content)
         else:
             await self.get_channel(config.online_logger_id).send("Command received from `" + ctx.author.name + "` on `"
