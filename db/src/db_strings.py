@@ -49,6 +49,7 @@ INIT_SETTING_TABLE = ("CREATE TABLE IF NOT EXISTS Settings ("
                       "server_id INTEGER PRIMARY KEY,"
                       "map_list TEXT NOT NULL,"
                       "prev_team_id INTEGER,"
+                      "leaderboard_msg INTEGER,"
                       "season_num INTEGER NOT NULL,"
                       "season_start INTEGER NOT NULL,"
                       "season_end INTEGER NOT NULL"
@@ -67,8 +68,9 @@ INSERT_TEAM = ("INSERT INTO Team(team_id, player_id, is_sub)"
 INSERT_SCRIM = ("INSERT INTO Scrim(scrim_id, alpha_team, beta_team, alpha_score, beta_score)"
                 "VALUES(?, ?, ?, ?, ?)")
 
-INSERT_SETTING = ("INSERT INTO Settings(server_id, map_list, prev_team_id, season_num, season_start, season_end)"
-                  "VALUES(?, ?, ?, ?, ?, ?)")
+INSERT_SETTING = ("INSERT INTO Settings(server_id, map_list, prev_team_id, leaderboard_msg, season_num, "
+                  "season_start, season_end)"
+                  "VALUES(?, ?, ?, ?, ?, ?, ?)")
 
 GET_ALL_PROFILES_PLAYER_ID = "SELECT player_id FROM Profile"
 
@@ -81,6 +83,12 @@ GET_TEAM = "SELECT * FROM Team WHERE team_id = ?"
 GET_SCRIM = "SELECT * FROM Scrim WHERE scrim_id = ?"
 
 GET_SETTINGS = "SELECT * FROM Settings WHERE server_id = ?"
+
+GET_LEADERBOARD = ("SELECT player_id, num_game_win + num_game_loss as total_games, rank_mu "
+                   "FROM Player "
+                   "ORDER BY "
+                   "rank_mu DESC, "
+                   "total_games DESC")
 
 UPDATE_PROFILE = ("UPDATE Profile "
                   "SET fc = ? "
@@ -119,6 +127,10 @@ UPDATE_SEASON = ("UPDATE Settings "
                  "season_start = ?, "
                  "season_end = ? "
                  "WHERE server_id = ?")
+
+UPDATE_LEADERBOARD = ("UPDATE Settings "
+                      "SET leaderboard_msg = ? "
+                      "WHERE server_id = ?")
 
 UPDATE_SEASON_END = ("UPDATE Settings "
                      "SET season_end = ? "

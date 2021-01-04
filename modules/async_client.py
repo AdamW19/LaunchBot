@@ -1,6 +1,5 @@
 # From Splatbot: https://github.com/ktraw2/SplatBot/blob/master/modules/async_client.py
 
-import aiohttp
 import asyncio
 import json
 
@@ -13,7 +12,8 @@ class AsyncClient:
         self.connection = session
 
     async def send_request(self, request: str):
-        async with self.connection.get(self.request_prefix + request + self.request_suffix, headers=self.header) as response:
+        async with self.connection.get(self.request_prefix + request + self.request_suffix, headers=self.header) as \
+                response:
             if response.status == 200:
                 return await response.text()
             elif response.status == 429:
