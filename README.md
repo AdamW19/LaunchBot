@@ -21,8 +21,7 @@ Then rename it to `config.py`:
 ```console
 cp config_public.py config.py
 ```
-If you forget to rename it, the bot will rename it for you, but will stop code execution just in case you forgot to 
-populate the file.
+If you forget to rename it, the bot will rename it for you, but will remind you to make sure `config.py` was properly setup.
 
 You'll also need to install any dependencies. Use `pip` and the provided `requirements.txt`:
 ```console
