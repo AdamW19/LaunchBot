@@ -36,8 +36,9 @@ class Profiles(commands.Cog):
                     embed = await self.gen_profile_embed(mention[0])  # if it is a mention, use that
 
         if embed is None:  # If parsing failed, return error message
-            await ctx.send(":x: Profile not found. Please make your profile with `l?profile set [fc]`. If you tried "
-                           "to get another user's profile, the user did not set up their profile yet.")
+            await ctx.send(":x: Profile not found. Please make your profile with `l?profile set [fc]`.\n"
+                           "If you tried to get another user's profile, either they did not set up their profile or "
+                           "they are no longer in the server.")
         else:  # otherwise send the embed
             await ctx.send(embed=embed)
 
@@ -103,7 +104,7 @@ class Profiles(commands.Cog):
         profile = self.db.execute_query(db_strings.GET_PROFILE, guild_user.id)  # Get profile
         player = self.db.execute_query(db_strings.GET_PLAYER, guild_user.id)  # Get player
 
-        if len(profile) == 0 and len(player) == 0:  # If both are None, return None
+        if len(profile) == 0:  # If there's no profile, return None
             return None
 
         title = "Profile -- " + guild_user.name
