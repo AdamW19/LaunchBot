@@ -9,7 +9,12 @@ A bot for LaunchPoint. Could also be a good general purpose draft server.
 - Hosts a leaderboard with pagination and updating post.
 
 ## How to Run
-You'll need to make your own `config.py` file. You are free to use `config_public.py` as the base. You'll need to get your own bot token,
+First, you'll need to clone the repo:
+```console
+git clone https://github.com/AdamW19/LaunchBot.git
+```
+
+Then you'll need to make your own `config.py` file. You are free to use `config_public.py` as the base. You'll need to get your own bot token,
 and edit the various logging channels and such.
 Then rename it to `config.py`:
 
@@ -45,6 +50,8 @@ Trueskill™ is a registered trademark of the Microsoft Corporation. All rights 
 - We would like to thank [splatoon2.ink](https://splatoon2.ink/) for the
 rotation API.
 - A majority of the rotation commands, the help commands, and the error parsing comes from [ktraw2's Splatbot](https://github.com/ktraw2/SplatBot).
+
+- All other libraries used to make LaunchBot can be found in the given `requirements.txt`.
 
 # License
 This repo is licensed under the GNU General Public License v3.0. Please visit [the license](LICENSE) for more information.
