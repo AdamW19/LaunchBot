@@ -1,7 +1,10 @@
+import asyncio
+import time
+
 from db.src import db_strings
 from db.src.database import Database
+from modules.leaderboard_helper import finalize_leaderboard
 from modules.power_level import Team, Result
-import time
 
 
 class SplatoonDB(Database):
@@ -22,17 +25,23 @@ class SplatoonDB(Database):
 
         self.conn.commit()
 
-    def init_new_season(self, server_id: int):
+    async def init_new_season(self, server_id: int, ctx):
         # Get stuff from old season for final update
         current_settings = self.execute_query(db_strings.GET_SETTINGS, server_id)
-        current_season = current_settings[0][3]
-        current_start_time = current_settings[0][4]
+        leaderboard_msg_id = current_settings[0][3]
+        current_season = current_settings[0][4]
+        current_start_time = current_settings[0][5]
+        leaderboard = self.execute_query_no_arg(db_strings.GET_LEADERBOARD)
         new_season_num = current_season + 1
         current_time = int(time.time())
 
         # last update of old season table, so we have end_time correct
-        self.execute_commit_query(db_strings.UPDATE_SEASON, (current_season, current_start_time, current_time,
-                                                             server_id))
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (current_season, current_start_time, leaderboard_msg_id,
+                                                             current_time, server_id))
+
+        # Finalize the global leaderboard, lock is needed to prevent double edits to the leaderboard
+        async with asyncio.Lock():
+            await finalize_leaderboard(leaderboard_msg_id, current_season, leaderboard, ctx)
 
         # starting new table
         super(SplatoonDB, self).start_new_season(new_season_num)
@@ -41,7 +50,7 @@ class SplatoonDB(Database):
         self.execute_query_no_arg(db_strings.DROP_SCRIM_TABLE)
 
         # Updating seasons table
-        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, current_time, 0, server_id))
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, 0, current_time, 0, server_id))
 
         # Inits any dropped tables
         self.init_season()
@@ -51,10 +60,10 @@ class SplatoonDB(Database):
         removed_players = []
         player_ids = self.execute_query_no_arg(db_strings.GET_ALL_PROFILES_PLAYER_ID)
         for player in player_ids:
-            if player not in server_members:
+            if player.id not in server_members:
                 self.execute_commit_query(db_strings.DELETE_PROFILE, player)
                 removed_players.append(player)
-        self.conn.commit()
+            self.conn.commit()
         return removed_players  # return what players we removed
 
     def update_season_end(self, server_id: int):

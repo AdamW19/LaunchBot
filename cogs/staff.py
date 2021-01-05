@@ -121,17 +121,25 @@ class Staff(Cog):
             await temp_message.edit(content="Operation canceled. Did not start a new season.")
             await temp_message.remove_reaction(emoji="👍", member=ctx.bot.user)
         else:
-            # otherwise start new season
-            self.bot.db.init_new_season(ctx.guild.id)
+            await ctx.send("Starting new season... This may take some time.")
+
+            await asyncio.sleep(5)  # like leaderboard, sometimes the bot just needs time to catch up
+
+            # otherwise start new season, get any purged players
+            await self.bot.db.init_new_season(ctx.guild.id, ctx)
+            removed_members = self.bot.db.purge_players(ctx.guild.members)
 
             # Sets confirmation/reminder for maplist
-            await ctx.send(":white_check_mark: Successfully started new season. **Remember to update the maplist via "
-                           "`s?settings maplist`!**")
+            await ctx.send(":white_check_mark: Successfully started new season.\n\n"
+                           ":ballot_box_with_check: Removed {} profiles because they are not in the server anymore.\n"
+                           ":ballot_box_with_check: Finalized previous season's leaderboard.\n\n"
+                           " **Remember to update the maplist via `s?settings maplist`!**".
+                           format(len(removed_members)))
 
             # pings launchpoint about the new season
             launchpoint_role = discord.utils.get(ctx.guild.roles, name="LaunchPoint")
             season_num = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
-            season_num = season_num[0][3]
+            season_num = season_num[0][4]
             await ctx.guild.get_channel(config.launchpoint_announcement_id).send(launchpoint_role.mention + " Season " +
                                                                                  str(season_num) + " has started!")
 
