@@ -9,34 +9,33 @@ help_embed_fields = {
                  "`l?schedule [regular|ranked|league|salmon]` - get the current mode for the given battle type.\n"
                  "`l?schedule [regular|ranked|league|salmon] next` - gets the next rotation for the given mode."
          },
-    "draft_commands":
-        {"title": "Draft Commands",
-         "body": "`l?draft help` - gets more specific help for draft commands.\n"
-                 "\n** You must have the `Launchpoint` role to use these commands. **\n"
-                 "`l?draft [num]` - starts a draft and you're looking for `num` people to play.\n"
-         },
     "profile_commands":
         {"title": "Profile Commands",
-         "body": "`l?draft help` - gets more specific help for profile commands.\n"
-                 "`l?profile` - gets your profile.\n"
+         "body": "`l?profile` - gets your profile.\n"
                  "`l?profile [discord_name|discord_id]` - gets someone else's profile.\n"
-                 "`l?profile [set|delete] [fc]` - adds/deletes your friend code from your profile.\n"
-        },
-    "staff_commands":
-        {
-            "title": "Staff Commands",
-            "body": "** You must have the `Staff` role to use these commands. **\n"
-                    "`l?settings` - more specific help for all admin commands.\n"
-                    "`l?settings maplist [code]` - set new maplist with a nkitten code.\n"
-                    "`l?settings seaspon close` - closes the season\n"
-                    "`l?settings season open` - starts a new season\n"
-                    ""
-        },
+                 "`l?profile set [fc]` - makes your profile with your Nintendo Switch Friend Code.\n"
+                 "`l?profile delete` - deletes your profile."
+         },
+    "draft_commands":
+        {"title": "Draft Commands -- `Launchpoint` role required.",
+         "body": "`l?draft` - starts a draft. \n"
+         },
+    "leaderboard_commands":
+        {"title": "Leaderboard Commands",
+         "body": "`l?leaderboard` - Shows a paginated leaderboard of the top 50 players from the current season. You"
+                 "may use `l`, `rank`, or `ranks` in in lieu of `leaderboard`."
+         },
     "misc_commands":
         {"title": "Misc. Commands",
-         "body": "`l?help` - view the help for LaunchBot\n"
-                 "`l?hello` - tests to see if LaunchBot is functioning properly\n"
+         "body": "`l?help` - view the help pages for LaunchBot.\n"
+                 "`l?ping` - tests to see if LaunchBot is functioning properly (also shows ping time).\n"
+                 "`l?special_thanks` - a special thank you to the ones that made LaunchBot possible."
          },
+    "staff_commands":
+        {
+            "title": "Staff Commands -- `Staff` role required",
+            "body": "`l?settings` - for a list of all staff commands.\n"
+        },
     "command_syntax":
         {"title": "Command Syntax",
          "body": "Commands are formatted like this: `l?command [argument]`. "
@@ -45,7 +44,8 @@ help_embed_fields = {
                  "**Examples:**\n"
                  "1. `l?schedule regular`\n"
                  "2. `l?rotation salmon next`\n"
-                 "3. `l?draft 7`\n"
+                 "3. `l?profile set 0000-0000-0000`\n"
+                 "3. `l?settings season start`\n"
          }
 }
 
@@ -76,7 +76,7 @@ def generate_base_help_embed(bot):
     help_embed = discord.Embed(title=bot.user.name + " Help", color=config.embed_color)
     help_embed.set_thumbnail(
         url=bot.user.avatar_url)
-    help_embed.set_footer(text="Developed by Adam!#888 and DRF#6237")
+    help_embed.set_footer(text="Developed by Adam!#8888 and DRF#6237")
     return help_embed
 
 
@@ -85,12 +85,8 @@ def add_help_embed_field(help_embed, key):
 
 
 def add_help_embed_footer_links(help_embed, bot):
-    help_embed.add_field(name="<:github:791151957226160178> " + bot.user.name + " Github",
-                         value="Visit the code for " + bot.user.name + " [here.](https://github.com/AdamW19/LaunchBot)")
-    help_embed.add_field(name=":pray: " + "Special Thanks",
-                         value="We would like to thank [splatoon2.ink](https://splatoon2.ink) for the rotation API. "
-                               + bot.user.name + " is written in Python 3 with [discord.py]("
-                                                 "https://github.com/Rapptz/discord.py).")
-    help_embed.add_field(name="<:launchpoint:791152168429813800> About LaunchPoint",
-                         value="LaunchPoint is a pickup scrim server for low level players! [Join today!]("
-                               "https://discord.gg/MVNtQU9aWV)")
+    help_embed.add_field(name="<:github:791151957226160178>  Github",
+                         value="See the code for " + bot.user.name + " [here.](https://github.com/AdamW19/LaunchBot)")
+    help_embed.add_field(name=":pray:  Special Thanks",
+                         value="Type `l?special_thanks` to see any APIs and technologies used to make " +
+                               bot.user.name + ".")

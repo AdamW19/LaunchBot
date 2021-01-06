@@ -1,4 +1,7 @@
+import discord
 from discord.ext import commands
+
+import config
 from modules import embeds
 
 
@@ -15,8 +18,10 @@ class Help(commands.Cog):
                                        "use `l?help [page]` to view any of the pages listed below:\n\n"
                                        "1. Rotation Commands\n"
                                        "2. Draft Commands\n"
-                                       "3. Misc. Commands\n"
-                                       "4. Command Syntax Help\n\n"
+                                       "3. Leaderboard Commands\n"
+                                       "4. Misc. Commands\n"
+                                       "5. Staff Commands\n"
+                                       "6. Command Syntax Help\n\n"
                                        "You can also type `l?help full` "
                                        "if you would like the view the full contents of the help in a DM.",
                                  inline=False)
@@ -37,13 +42,25 @@ class Help(commands.Cog):
         embeds.add_help_embed_field(help_embed, "draft_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="3", aliases=["Misc"])
+    @help.command(name="3", aliases=["Leaderboard"])
+    async def leaderboard_commands(self, ctx):
+        help_embed = embeds.generate_base_help_embed(self.bot)
+        embeds.add_help_embed_field(help_embed, "leaderboard_commands")
+        await ctx.send(embed=help_embed)
+
+    @help.command(name="4", aliases=["Misc"])
     async def misc_commands(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "misc_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="4", aliases=["Command"])
+    @help.command(name="5", aliases=["Staff"])
+    async def staff_commands(self, ctx):
+        help_embed = embeds.generate_base_help_embed(self.bot)
+        embeds.add_help_embed_field(help_embed, "staff_commands")
+        await ctx.send(embed=help_embed)
+
+    @help.command(name="6", aliases=["Command"])
     async def command_syntax(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "command_syntax")
@@ -57,11 +74,30 @@ class Help(commands.Cog):
         embeds.add_help_embed_footer_links(help_embed, self.bot)
         await ctx.author.send(embed=help_embed)
         await ctx.send(":white_check_mark: " + ctx.author.mention +
-                       ", the full help for " + self.bot.user.name + " has been DMed to you to prevent spam.")
+                       ", the full help for " + self.bot.user.name + " has been DMed to you.")
 
     @commands.command()
-    async def hello(self, ctx):
-        await ctx.send("Hello, World!")
+    async def ping(self, ctx):
+        await ctx.send('Pong! Took {0} ms'.format(round(self.bot.latency * 1000, 0)))  # 1 decimal point is good enough
+
+    @commands.command()
+    async def special_thanks(self, ctx):
+        embed = discord.Embed(title="Special Thanks", color=config.embed_color)
+        embed.add_field(name="Technologies Used", value=self.bot.user.name + "is written in Python 3 with "
+                                                        "[discord.py](https://discordpy.readthedocs.io/en/latest/) and "
+                                                        "SQLite. Player power levels uses "
+                                                        "[Trueskill™](http://research.microsoft.com/en-us/projects"
+                                                        "/trueskill/). Trueskill™ is a registered trademark of the "
+                                                        "Microsoft Corporation.\n All rights reserved.", inline=False)
+        embed.add_field(name="Special Thanks", value="We would like to thank [splatoon2.ink](https://splatoon2.ink/) "
+                                                     "for the rotation API. A majority of the rotation commands, help "
+                                                     "commands, and the error parsing comes from "
+                                                     "[ktraw2's Splatbot](https://github.com/ktraw2/SplatBot).")
+
+        embed.add_field(name="Github Repo",
+                        value="Visit the code for " + self.bot.user.name + " [here.](https://github.com/AdamW19"
+                                                                           "/LaunchBot)", inline=False)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):

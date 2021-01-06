@@ -14,7 +14,7 @@ class Rotation(commands.Cog):
         self.splatnet = Splatnet(session=bot.session)
 
     async def on_ready(self):
-        self.splatnet.connection = self.bot.session
+        self.splatnet.connection = self.bot.session  # sometimes for no reason bot.session doesn't get init-ed properly
 
     @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["schedule", "schedules", "rotations",
                                                                                  "info", "r"])
@@ -71,21 +71,22 @@ class Rotation(commands.Cog):
         channel_id = ctx.channel.id
         time = datetime.now()
 
-        self.splatnet.update_connection(self.bot.session)  # It's really dumb but sometimes on_ready doesn't run...
-
+        # Call API for current rotation
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         success = await rotation.populate_data()
 
         if success:
+            # Check if splatfest is currently happening
             if rotation.mode_type is ModeTypes.SPLATFEST:
                 await ctx.send(":warning: Splatfest is currently occurring -- **Ranked/League modes are not "
                                "available.**")
-            embed, file = await self.generate_embed(rotation, channel_id, False, False)
+            embed, file = await self.generate_embed(rotation, channel_id, False, False)  # file is from gif generation
             if file is None:
                 await ctx.send(embed=embed)
             else:
                 await ctx.send(embed=embed, file=file)
         else:
+            # if no rotation is happening and it's salmon, get the next salmon rotation
             if rotation.mode_type is ModeTypes.SALMON:
                 await ctx.send(":warning: Salmon Run is currently **not** available. Here is the next rotation:")
                 await self.make_next_rotation(schedule_type, ctx, True)
@@ -95,8 +96,6 @@ class Rotation(commands.Cog):
     async def make_next_rotation(self, schedule_type: ModeTypes, ctx, overflow: bool):
         channel_id = ctx.channel.id
         time = datetime.now()
-
-        self.splatnet.update_connection(self.bot.session)   # It's really dumb but sometimes on_ready doesn't run...
 
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         await rotation.populate_data()
@@ -157,6 +156,7 @@ class Rotation(commands.Cog):
         time_diff = DateDifference.subtract_datetimes(time, datetime.now())
         time_str = str(time_diff)
 
+        # Header for time_str
         if rotation.mode_type is ModeTypes.SALMON and not overflow and not is_next:
             time_until_str = "Time Until End of Rotation"
         elif is_next:
