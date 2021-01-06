@@ -12,7 +12,7 @@ from db.src.database import DB_FILE_BASE
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard", "cogs.data"]
 
 DB_FILENAME_FMT = "season-{}.db"
 
@@ -44,7 +44,7 @@ class LPBot(commands.Bot):
         for e in extensions:
             self.load_extension(e)
 
-        # Deletes any .gifs or .pngs made during gif generation for rotation commands
+        # Deletes any temp files
         self.loop.create_task(self.garbage_collector())
 
         # Assigns self.session an aiohttp session because you need to assign it async
@@ -66,13 +66,14 @@ class LPBot(commands.Bot):
 
     async def garbage_collector(self):
         # Removes all .gif and .png files from gif generation for lobby/rotation info
+        # Also removes .csv files from data requests
         await self.wait_until_ready()
         while not self.is_closed():
-            print("[LPBot] Deleting old files...")
+            print("[LPBot] Deleting temp files...")
             for f in os.listdir():
-                if f.endswith(".gif") or f.endswith(".png"):
+                if f.endswith(".gif") or f.endswith(".png") or f.endswith(".csv"):
                     os.remove(f)
-            print("[LPBot] Deleted all old files")
+            print("[LPBot] Deleted all temp files")
             await asyncio.sleep(300)  # removes every 5 min/300 sec
 
     async def on_guild_join(self, guild):

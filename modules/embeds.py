@@ -29,7 +29,8 @@ help_embed_fields = {
         {"title": "Misc. Commands",
          "body": "`l?help` - view the help pages for LaunchBot.\n"
                  "`l?ping` - tests to see if LaunchBot is functioning properly (also shows ping time).\n"
-                 "`l?special_thanks` - a special thank you to the ones that made LaunchBot possible."
+                 "`l?special_thanks` - a special thank you to the ones that made LaunchBot possible.\n"
+                 "`l?data` - allows you to download or delete your data from our databases."
          },
     "staff_commands":
         {
@@ -90,3 +91,6 @@ def add_help_embed_footer_links(help_embed, bot):
     help_embed.add_field(name=":pray:  Special Thanks",
                          value="Type `l?special_thanks` to see any APIs and technologies used to make " +
                                bot.user.name + ".")
+    help_embed.add_field(name=":warning:  Data Handling",
+                         value="In accordance of GPDR and CCPA, we are required to allow you to delete or download "
+                               "your data. Type `l?data` for more information.")

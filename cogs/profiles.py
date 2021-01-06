@@ -29,7 +29,7 @@ class Profiles(commands.Cog):
                 user_id = args[0]
 
                 if len(mention) == 0:  # If there's no mention, maybe it's a user id
-                    user = self.bot.get_user(user_id)
+                    user = await ctx.guild.fetch_member(user_id)
                     if user is not None:  # if it is a user id, use that
                         embed = await self.gen_profile_embed(user)
                 else:
