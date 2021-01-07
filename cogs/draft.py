@@ -7,6 +7,9 @@ from discord.ext import commands
 from discord.ext.commands import Cog
 # from discord import Guild
 
+LAUNCHPOINT_ROLE = 795214612576469022
+LOBBY_SIZE = 8
+
 
 class Status(Enum):
     RECRUIT = auto()
@@ -20,9 +23,6 @@ class Draft(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.db = None
-        self.list_captains = []
-        self.list_players = []
-        self.list_all_players = []
 
     @commands.command(case_insensitive=True)
     @commands.has_role("LaunchPoint")
@@ -32,13 +32,12 @@ class Draft(Cog):
         #msg = '{}'.format(LaunchPoint.mention)
         #await ctx.send('<@&795214612576469022>')
 
-        self.list_captains = []
-        self.list_players = []
-        self.list_all_players = []
+        captains = []
+        players = []
 
         # Embed for players to join draft
         embed = discord.Embed(title="Draft")
-        embed.add_field(name="Captains", value=ctx.author, inline=False)
+        embed.add_field(name="Captains", value=ctx.author.mention, inline=False)
         embed.add_field(name="Players", value="Waiting on more players.", inline=False)
         embed.set_footer(text="Scrim ID: " + str(ctx.message.created_at))
         message = await ctx.send(embed=embed)
@@ -49,55 +48,45 @@ class Draft(Cog):
         await message.add_reaction(launchEmoji)
         await message.add_reaction(stopEmoji)
 
-        self.list_captains.append(ctx.author)
-        self.list_all_players.append(ctx.author)
+        captains.append(ctx.author)
+        players.append(ctx.author)
 
     #async def on_reaction_add(self, reaction, user):
         # Open Embed until 8 players join or 30 minutes pass
-        isEight = False
-        while not isEight:
+        while len(players) is not LOBBY_SIZE:
             try:
                 reaction, user = await self.bot.wait_for('reaction_add', timeout=1800.0) #check=check)
-                role = 795214612576469022
-                #role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
-                if reaction == launchEmoji: #role in user.roles and
-                    await ctx.send('Here!')
-                    self.list_all_players.append(user.name)
-                    if len(self.list_players) == 8:
-                        self.list_captains.append(user.name)
-                        isEight = True
-                        captains = ""
-                        for i in range(len(self.list_captains)):
-                            captains = self.list_captains[i] + "\n" + captains
-                        embed.set_field_at(0, "Captains", captains)
-                    else:
-                        players = ""
-                        for i in range(len(self.list_players)):
-                            players = self.list_players[i] + "\n" + players
-                        self.list_players.append(user.name)
-                        embed.set_field_at(1, "Players", players)
-                    await message.edit(embed=embed)
-                elif reaction == stopEmoji: #and role in user.roles:
-                    self.list_all_players.remove(user.name)
-                    if user.name in self.list_players:
-                        self.list_players.remove(user.name)
-                        players = ""
-                        for i in range(len(self.list_players)):
-                            players = self.list_players[i] + "\n" + players
-                        embed.set_field_at(1, "Players", players)
-                    elif user.name in self.list_captains:
-                        self.list_captains.remove(user.name)
-                        captains = ""
-                        for i in range(len(self.list_captains)):
-                            captains = self.list_captains[i] + "\n" + captains
-                        embed.set_field_at(0, "Captains", captains)
-                    #await reaction.remove(user)
 
-                    await message.edit(embed=embed)
+                if user.id == ctx.me.id:  # skipping our own reactions
+                    continue
+
+                #role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
+                if str(reaction) == launchEmoji: #role in user.roles and
+                    players.append(user.mention)
+                    if len(players) is LOBBY_SIZE:
+                        captains.append(user.mention)
+                elif str(reaction) == stopEmoji: #and role in user.roles:
+                    players.remove(user.mention)
+
+                player_str = self.gen_player_str(players)
+                captain_str = self.gen_player_str(captains)
+
+                embed.set_field_at(index=0, name="Captains", value=captain_str)
+                embed.set_field_at(index=1, name="Players", value=player_str)
+
+                await message.edit(embed=embed)
 
             except asyncio.TimeoutError:
-                await ctx.send("Draft Closed - Not enough players")
-                isEight = True
+                await message.edit("Draft Closed - Not enough players")
+                return
+
+    @staticmethod
+    def gen_player_str(players: list):
+        player_str = ""
+        for player in players:
+            player_str += player + "\n"
+        return player_str
+
 
 def setup(bot):
     bot.add_cog(Draft(bot))
