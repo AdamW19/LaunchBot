@@ -3,6 +3,7 @@ from db.src.database import Database, DB_FILE_BASE
 
 
 def get_all_db_files():
+    # Gets all files that have the .db file extension
     import glob
     db_files = glob.glob(DB_FILE_BASE + "*.db")
     return db_files
@@ -21,6 +22,7 @@ class DataDB(Database):
 
         season_id = self.execute_query(db_strings.GET_SETTINGS, server_id)[0][4]
 
+        # Gets profile information
         profile = self.execute_query(db_strings.GET_PROFILE, player_id)
         if len(profile) is not 0:
             profile = profile[0]
@@ -28,6 +30,7 @@ class DataDB(Database):
         else:
             profile_info = ["None"] * 2
 
+        # Gets player information
         player = self.execute_query(db_strings.GET_PLAYER, player_id)
         if len(player) is not 0:
             player = str(player[0])
@@ -36,11 +39,14 @@ class DataDB(Database):
         else:
             player_info = ["None"] * 7
 
+        # Gets team/scrim information
         teams_list = self.execute_query(db_strings.GET_TEAM_VIA_PLAYER, player_id)
         if teams_list is not None:
+            # For each team found, find the scrim id and find any other players we've played against
             for team_listing in teams_list:
                 team_id = team_listing[0]
                 scrim_list = [team_id, str(bool(team_listing[2])), str(bool(team_listing[3]))]
+                # 2 is is_sub, 3 is is_captain
 
                 players = []
 
@@ -61,11 +67,12 @@ class DataDB(Database):
 
                 team_info.append(scrim_list)
         else:
-            team_info = ["None"] * 5
+            team_info = ["None"] * 5  # if no teams were found, return Nones
 
         return season_id, profile_info, player_info, team_info
 
-    def purge_player_info(self, player_id: int):
-        self.execute_commit_query(db_strings.DELETE_PLAYER, player_id)
-        self.execute_commit_query(db_strings.DELETE_PROFILE, player_id)
-        self.execute_commit_query(db_strings.DELETE_TEAM_PLAYER, player_id)
+    def purge_player_info(self, user_id: int):
+        # Deletes all player info
+        self.execute_commit_query(db_strings.DELETE_PLAYER, user_id)
+        self.execute_commit_query(db_strings.DELETE_PROFILE, user_id)
+        self.execute_commit_query(db_strings.DELETE_TEAM_PLAYER, user_id)

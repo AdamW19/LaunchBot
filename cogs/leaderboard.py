@@ -58,7 +58,7 @@ class Leaderboard(Cog):
 
         # Makes embeds for pagination, we want 5 10-player sized embeds sorta like the global leaderboard
         for i in range(0, LEADERBOARD_SIZE, MAIN_LEADERBOARD_LIM):
-            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season))  # TODO fix empty embeds
+            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season))
 
         # Sets up pagination, thank you libraries
         paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx=ctx, remove_reactions=True, auto_footer=True)

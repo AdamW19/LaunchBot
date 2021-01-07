@@ -36,7 +36,7 @@ class Profiles(commands.Cog):
                     embed = await self.gen_profile_embed(mention[0])  # if it is a mention, use that
 
         if embed is None:  # If parsing failed, return error message
-            await ctx.send(":x: Profile not found. Please make your profile with `l?profile set [fc]`.\n"
+            await ctx.send(":x: Profile not found. Please make your profile with `l?profile set [fc]`.\n\n"
                            "If you tried to get another user's profile, either they did not set up their profile or "
                            "they are no longer in the server.")
         else:  # otherwise send the embed

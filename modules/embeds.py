@@ -22,7 +22,7 @@ help_embed_fields = {
          },
     "leaderboard_commands":
         {"title": "Leaderboard Commands",
-         "body": "`l?leaderboard` - Shows a paginated leaderboard of the top 50 players from the current season. You"
+         "body": "`l?leaderboard` - Shows a paginated leaderboard of the top 50 players from the current season. You "
                  "may use `l`, `rank`, or `ranks` in in lieu of `leaderboard`."
          },
     "misc_commands":
@@ -35,7 +35,7 @@ help_embed_fields = {
     "staff_commands":
         {
             "title": "Staff Commands -- `Staff` role required",
-            "body": "`l?settings` - for a list of all staff commands.\n"
+            "body": "`l?staff` - for a list of all staff commands.\n"
         },
     "command_syntax":
         {"title": "Command Syntax",
@@ -46,7 +46,7 @@ help_embed_fields = {
                  "1. `l?schedule regular`\n"
                  "2. `l?rotation salmon next`\n"
                  "3. `l?profile set 0000-0000-0000`\n"
-                 "3. `l?settings season start`\n"
+                 "3. `l?staff season start`\n"
          }
 }
 

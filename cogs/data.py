@@ -22,7 +22,7 @@ class Data(commands.Cog):
                                                                                            "`privacy`.")
         embed.add_field(name="Purpose", value="Due to GDPR and CCPA, we are required to allow you to download and "
                                               "delete your data from our databases.\n"
-                                              "Downloading your data will result in the bot DM-ing you a `.csv` file "
+                                              "Downloading your data will result in the bot DM-ing you `.csv` file(s) "
                                               "that contains all the data we have of you. This includes your profile, "
                                               "your player information, and any drafts you were in.\n"
                                               "Deleting your data irrevocably deletes all of our data of you.",
@@ -63,6 +63,7 @@ class Data(commands.Cog):
 
             file_name = str(ctx.author.id) + "-" + str(season_id) + ".csv"
             with open(file_name, 'w', newline='') as file:
+                # Generate the file
                 writer = csv.writer(file)
                 writer.writerow(["Player ID", "Friend Code"])  # Headers for each info
                 writer.writerow(profile_info)
@@ -87,8 +88,8 @@ class Data(commands.Cog):
         # sends warning message
         temp_message = await ctx.send(":warning: Are you sure you want to delete your data? "
                                       "You cannot recover your data after deletion. We recommend downloading your data "
-                                      "via `l?data download`. Do note that we can not recover your data under any "
-                                      "circumstance.\n\n"
+                                      "via `l?data download`. Do note that we can not restore your data into the "
+                                      "databases under any circumstance.\n\n"
                                       "To confirm your decision to **irreversibly** delete your data, "
                                       "react `👍` to this message within the next 15 seconds.")
         await temp_message.add_reaction("👍")
