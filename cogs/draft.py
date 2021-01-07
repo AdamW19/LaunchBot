@@ -62,17 +62,18 @@ class Draft(Cog):
 
                 #role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
                 if str(reaction) == launchEmoji: #role in user.roles and
-                    players.append(user.mention)
+                    players.append(user)
                     if len(players) is LOBBY_SIZE:
-                        captains.append(user.mention)
+                        captains.append(user)
                 elif str(reaction) == stopEmoji: #and role in user.roles:
-                    players.remove(user.mention)
+                    players.remove(user)
+                    await reaction.remove(user)
 
                 player_str = self.gen_player_str(players)
                 captain_str = self.gen_player_str(captains)
 
-                embed.set_field_at(index=0, name="Captains", value=captain_str)
-                embed.set_field_at(index=1, name="Players", value=player_str)
+                embed.set_field_at(index=0, name="Captains", value=captain_str, inline=False)
+                embed.set_field_at(index=1, name="Players", value=player_str, inline=False)
 
                 await message.edit(embed=embed)
 
@@ -84,7 +85,7 @@ class Draft(Cog):
     def gen_player_str(players: list):
         player_str = ""
         for player in players:
-            player_str += player + "\n"
+            player_str += player.mention + "\n"
         return player_str
 
 
