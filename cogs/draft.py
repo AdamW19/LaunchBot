@@ -61,7 +61,7 @@ class Draft(Cog):
         embed.add_field(name="Captains", value=ctx.author.mention, inline=False)
         embed.add_field(name="Players", value="Empty", inline=False)
         embed.add_field(name="Status", value=REMAINING_STR.format(LOBBY_SIZE - 1) + " to start draft.", inline=False)
-        embed.set_footer(text="Scrim ID: " + str(int(lobby_curation_time.timestamp())))
+        embed.set_footer(text="Scrim ID: " + str(ctx.message.id))
         message = await ctx.send(embed=embed)
 
         # LaunchPoint (react to join draft) and Stop (react to exit draft)
@@ -252,7 +252,7 @@ class Draft(Cog):
                 embed.set_field_at(index=0, name="Alpha Team", value=captA.mention)
                 embed.set_field_at(index=1, name="Bravo Team", value=captB.mention)
                 embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                   value=self.gen_players_remaining_str(players_remaining))
+                                   value=self.gen_players_remaining_str(players_remaining.values()))
                 embed.add_field(inline=False, name="Current Pick", value=captA.mention)
                 await message.edit(embed=embed)
                 await message.clear_reactions()
