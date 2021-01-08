@@ -19,7 +19,8 @@ from img.stages.test import FILE_PREFIX
 # from discord import Guild
 
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 1
+LOBBY_SIZE = 2
+EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
 REDO_MAP_MODE_THRESHOLD = 4
 BEST_OF = 7
@@ -209,6 +210,173 @@ class Draft(Cog):
 
             except asyncio.TimeoutError:
                 break  # if no captain rejects, continue on
+
+        # Commence draft sequence, pick way to select players
+        embed.set_field_at(index=0, name="Format 1: Alternate", value="Captain A Picks\n"
+                                                                        "Captain B Picks\n"
+                                                                        "Captain A Picks\n"
+                                                                        "Captain B Picks, etc.")
+        embed.set_field_at(index=1, name="Format 2: Snake", value="Captain A Picks\n"
+                                                                        "Captain B Picks\n"
+                                                                        "Captain B Picks\n"
+                                                                        "Captain A Picks, etc.")
+
+        embed.add_field(inline=False, name="Note", value="Both captains must react to the same draft format to proceed.\n"
+                                                            "Failure to agree will reset reactions. After 60 seconds, "
+                                                            "the bot will select a random draft format.")
+
+        # Clear old reactions, add 1 and 2 reaction for draft style selection
+        await message.clear_reactions()
+        await message.edit(embed=embed)
+        await message.add_reaction("1️⃣")
+        await message.add_reaction("2️⃣")
+
+        # Move all players to a dictionary with corresponding emote
+        players_remaining = {}
+        for i in range(len(players)):
+            players_remaining[EMOTE_NUM[i]] = players[i]
+
+        # Lists for each team
+        alpha = []
+        bravo = []
+
+        # Captains have 1 minute to agree, otherwise random
+        reactions_not_match = True
+        draft_mode_curation = datetime.now(pytz.utc)
+
+        while reactions_not_match:
+            async def start_draft_embed(captA, captB):
+                alpha.append(captA)
+                bravo.append(captB)
+
+                embed.set_field_at(index=0, name="Alpha Team", value=captA.mention)
+                embed.set_field_at(index=1, name="Bravo Team", value=captB.mention)
+                embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                   value=self.gen_players_remaining_str(players_remaining))
+                embed.add_field(inline=False, name="Current Pick", value=captA.mention)
+                await message.edit(embed=embed)
+                await message.clear_reactions()
+                await message.add_reaction("1️⃣")
+                await message.add_reaction("2️⃣")
+                await message.add_reaction("3️⃣")
+                await message.add_reaction("4️⃣")
+                await message.add_reaction("5️⃣")
+                await message.add_reaction("6️⃣")
+
+            def captain_a_check(reaction_c, user_c, curr_captA):
+                    if type(reaction_c.emoji) is str and (str(reaction_c) == '1️⃣' or str(reaction_c) == '2️⃣'
+                                                        or str(reaction_c) == '3️⃣' or str(reaction_c) == '4️⃣'
+                                                        or str(reaction_c) == '5️⃣' or str(reaction_c) == '6️⃣'):
+                        if curr_captA:
+                            return user_c.mentions == captA.mention and user_c.id is not ctx.me.id
+                        else:
+                            return user_c.mentions == captB.mention and user_c.id is not ctx.me.id
+                    return False
+
+            # 2 functions for 2 different draft styles
+            async def alternate_draft(captA, captB):
+                await start_draft_embed(captA, captB)
+                curr_captA = True
+                for i in range(len(players)):
+                    try:
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=captain_a_check(curr_captA))
+
+                    except asyncio.TimeoutError:
+                        keys = players_remaining.keys()
+                        num = random.randint(0, len(keys))
+                        reaction = keys[num]
+
+                    if curr_captA:
+                        alpha.append(players_remaining[str(reaction)])
+                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
+                    else:
+                        bravo.append(players_remaining[str(reaction)])
+                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+                    curr_captA = not curr_captA
+                    players_remaining.pop(str(reaction))
+                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                       value=self.gen_players_remaining_str(players_remaining))
+                    await message.edit(embed=embed)
+                    await reaction.clear()
+
+
+            async def snake_draft(captA, captB):
+                await start_draft_embed(captA, captB)
+                curr_captA = True
+                for i in range(len(players)):
+                    try:
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0,
+                                                                 check=captain_a_check(curr_captA))
+
+                    except asyncio.TimeoutError:
+                        keys = players_remaining.keys()
+                        num = random.randint(0, len(keys))
+                        reaction = keys[num]
+
+                    if curr_captA:
+                        alpha.append(players_remaining[str(reaction)])
+                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
+                    else:
+                        bravo.append(players_remaining[str(reaction)])
+                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+
+                    if i == 0 or i == 2 or i == 4:
+                        curr_captA = not curr_captA
+                    players_remaining.pop(str(reaction))
+                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                       value=self.gen_players_remaining_str(players_remaining))
+                    await message.edit(embed=embed)
+                    await reaction.clear()
+
+            # Ask captains to agree on draft format
+            try:
+                def captain_check(reaction_c, user_c):  # has to be a captain, not the bot, and reacted properly
+                    if type(reaction_c.emoji) is str and (str(reaction_c) == '1️⃣' or str(reaction_c) == '2️⃣'):
+                        return user_c in captains and user_c.id is not ctx.me.id
+                    return False
+
+                # Time remaining calculations
+                current_time = datetime.now(pytz.utc)
+                delta = current_time - draft_mode_curation
+                sec_left = 15.0 - delta.seconds
+
+                reaction1, captA = await self.bot.wait_for('reaction_add', timeout=sec_left, check=captain_check)
+                reaction2, captB = await self.bot.wait_for('reaction_add', timeout=sec_left, check=captain_check)
+
+                if str(reaction1) == str(reaction2):
+                    if str(reaction1) == "1️⃣":
+                        await alternate_draft(captA, captB)
+                    elif str(reaction1) == "2️⃣":
+                        await snake_draft(captA, captB)
+                        reactions_not_match = False
+                else:
+                    if str(reaction1) == "1️⃣" and str(reaction2) == "2️⃣":
+                        await reaction1.remove(captA)
+                        await reaction2.remove(captB)
+                    elif str(reaction2) == "1️⃣" and str(reaction1) == "2️⃣":
+                        await reaction1.remove(captB)
+                        await reaction2.remove(captA)
+
+            except asyncio.TimeoutError:
+                random_mode = random.randint(1, 3)
+                random_capt = random.randint(0, 2)
+                if random_capt == 0: # Randomize Capt A and B
+                    captA = captains[0]
+                    captB = captains[1]
+                else:
+                    captA = captains[1]
+                    captB = captains[0]
+                if random_mode == 1: # Randomize Draft Format
+                    await alternate_draft(captA, captB)
+                else:
+                    await snake_draft(captA, captB)
+                reactions_not_match = False
+
+        await self.match(ctx, alpha, bravo, captains, embed, message)
+
+
+
+
 
         # === Choosing how to choose teams ===
         await message.clear_reactions()
@@ -500,6 +668,13 @@ class Draft(Cog):
         player_str = ""
         for player in players:
             player_str += player.mention + "\n"
+        return player_str
+
+    def gen_players_remaining_str(players_remaining: dict):
+        player_str = ""
+        remaining_keys = players_remaining.keys()
+        for emote in remaining_keys:
+            player_str += players_remaining[emote] + " " + emote + "\n"
         return player_str
 
     @staticmethod
