@@ -8,12 +8,11 @@ import math
 
 import trueskill
 
-import config
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
 from modules import code_parser, power_level
-from db.src import splat_db, db_strings
+from db.src import db_strings
 from img.stages.test import FILE_PREFIX
 
 # from discord import Guild
