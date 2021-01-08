@@ -100,7 +100,7 @@ class Draft(Cog):
 
                 # role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
                 if str(reaction) == launchEmoji:
-                    if len(captains) is 0 or len(players) + len(captains) + 1 == LOBBY_SIZE:
+                    if user not in captains and (len(captains) is 0 or len(players) + len(captains) + 1 == LOBBY_SIZE):
                         captains.append(user)
                     elif user not in players and user not in captains:
                         players.append(user)
@@ -662,7 +662,6 @@ class Draft(Cog):
 
         await message.edit(embed=embed)
 
-
     @staticmethod
     def gen_player_str(players: list):
         player_str = ""
@@ -670,6 +669,7 @@ class Draft(Cog):
             player_str += player.mention + "\n"
         return player_str
 
+    @staticmethod
     def gen_players_remaining_str(players_remaining: dict):
         player_str = ""
         remaining_keys = players_remaining.keys()
