@@ -8,10 +8,11 @@ import config
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
+
 # from discord import Guild
 
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 8
+LOBBY_SIZE = 1
 
 REMAINING_STR = "Needs {} more player(s)"
 TIME_REMAINING = "{} more minutes before draft closes."
@@ -32,11 +33,10 @@ class Draft(Cog):
 
     @commands.command(case_insensitive=True)
     @commands.has_role("LaunchPoint")
-
     async def draft(self, ctx):
         # Ping LaunchPoint members
-        #msg = '{}'.format(LaunchPoint.mention)
-        #await ctx.send('<@&795214612576469022>')
+        # msg = '{}'.format(LaunchPoint.mention)
+        # await ctx.send('<@&795214612576469022>')
 
         captains = []
         players = []
@@ -58,11 +58,11 @@ class Draft(Cog):
 
         captains.append(ctx.author)
 
-    #async def on_reaction_add(self, reaction, user):
+        # async def on_reaction_add(self, reaction, user):
         # Open Embed until 8 players join or 30 minutes pass
-        while len(players) is not LOBBY_SIZE:
+        while len(players) + len(captains) is not LOBBY_SIZE:
             try:
-                def check(reaction, user):
+                def player_check(reaction, user):
                     # checks to make sure reaction isn't a self reaction, to make sure user has launchpoint role,
                     # and user isn't already in the lobby
                     if user.id is not ctx.me.id:
@@ -77,14 +77,14 @@ class Draft(Cog):
                 if delta.days < 0:
                     sec_left = 0
 
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=sec_left, check=check)
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=sec_left, check=player_check)
 
                 player_str = ""
                 captain_str = ""
                 status_str = ""
                 num_players_required = 0
 
-                #role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
+                # role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
                 if str(reaction) == launchEmoji:
                     if len(captains) is 0 or len(players) is LOBBY_SIZE:
                         captains.append(user)
@@ -128,6 +128,78 @@ class Draft(Cog):
                 await message.edit(content="Draft Closed - Not enough players", embed=None)
                 await message.clear_reactions()
                 return
+
+        # === Starting captain confirmation ===
+        await message.clear_reactions()
+
+        for i in range(3, 0, -1):  # so we only change captains at most 3 times
+            embed.clear_fields()
+            embed.add_field(name="Captains", value=self.gen_player_str(captains), inline=False)
+            embed.add_field(name="Captain Verification", value="Captains, react with `⛔️` within the next 15 "
+                                                               "seconds if you do not want to be the captain.\n"
+                                                               "You can switch captains {} more time(s).".format(i),
+                            inline=False)
+            await message.add_reaction("⛔")
+            await message.edit(embed=embed)
+
+            try:
+                def captain_check(reaction_c, user_c):  # has to be a captain, not the bot, and reacted properly
+                    if type(reaction_c.emoji) is str and str(reaction_c) == '⛔':
+                        return user_c in captains and user_c.id is not ctx.me.id
+                    return False
+
+                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=captain_check)
+                embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
+                embed.set_field_at(index=1, name="Captain?", value="Would anyone like to be the captain? React with "
+                                                                   "`🖐` to be the captain within the next 15 "
+                                                                   "seconds.")
+                await message.clear_reactions()
+                await message.add_reaction("🖐")
+                await message.edit(embed=embed)
+
+                try:
+                    def player_check(reaction_p, user_p):  # has to be a player, not already a captain, not the bot,
+                                                           # and raised their hand
+                        return user_p in players and user_p not in captains and user_p.id is not ctx.me.id \
+                               and str(reaction_p) is "🖐"
+
+                    reaction, new_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=player_check)
+
+                    # remove old captain and add them as a player, vice verse for new captain
+                    captains.remove(orig_captain)
+                    players.append(orig_captain)
+                    captains.append(new_captain)
+                    players.remove(new_captain)
+                    embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
+                    embed.set_field_at(index=1, name="Captain?", value=new_captain.mention + ", you are the new " +
+                                                                       "captain. Restarting captain confirmation...")
+                    await message.clear_reactions()
+                    await message.edit(embed=embed)
+
+                    with ctx.channel.typing():  # adds a pretty "typing" thing as a loading screen
+                        await asyncio.sleep(5)
+
+                except asyncio.TimeoutError:
+                    # if no one volunteers, send error that they will still be the captain
+                    embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
+                    embed.set_field_at(index=1, name="Failed to find new captain", value=orig_captain.mention + ", "
+                                                                                         "we could not find your " +
+                                                                                         "replacement, so you will "
+                                                                                         "continue to be the captain.\n"
+                                                                                         "Restarting captain "
+                                                                                         "confirmation...")
+                    await message.clear_reactions()
+                    await message.edit(embed=embed)
+
+                    with ctx.channel.typing():
+                        await asyncio.sleep(5)
+
+            except asyncio.TimeoutError:
+                break  # if no captain rejects, continue on
+
+        # === Choosing how to choose teams ===
+        await message.clear_reactions()
+        await ctx.send("successful")
 
     @staticmethod
     def gen_player_str(players: list):
