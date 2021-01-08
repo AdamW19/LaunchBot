@@ -3,19 +3,28 @@ import datetime
 from datetime import datetime
 from enum import Enum, auto
 import pytz
+import random
+import math
 
 import config
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
+from modules import code_parser
+from db.src import splat_db, db_strings
+from img.stages.test import FILE_PREFIX
 
 # from discord import Guild
 
 LAUNCHPOINT_ROLE = 795214612576469022
 LOBBY_SIZE = 1
+NUM_CAPTAINS = 2
+REDO_MAP_MODE_THRESHOLD = 4
+BEST_OF = 7
 
 REMAINING_STR = "Needs {} more player(s)"
 TIME_REMAINING = "{} more minutes before draft closes."
+GAME_STATUS = "Currently on game {}."
 
 
 class Status(Enum):
@@ -29,7 +38,7 @@ class Status(Enum):
 class Draft(Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db = None
+        self.db = self.bot.db
 
     @commands.command(case_insensitive=True)
     @commands.has_role("LaunchPoint")
@@ -86,7 +95,7 @@ class Draft(Cog):
 
                 # role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
                 if str(reaction) == launchEmoji:
-                    if len(captains) is 0 or len(players) is LOBBY_SIZE:
+                    if len(captains) is 0 or len(players) + len(captains) + 1 == LOBBY_SIZE:
                         captains.append(user)
                     elif user not in players and user not in captains:
                         players.append(user)
@@ -161,7 +170,7 @@ class Draft(Cog):
                     def player_check(reaction_p, user_p):  # has to be a player, not already a captain, not the bot,
                                                            # and raised their hand
                         return user_p in players and user_p not in captains and user_p.id is not ctx.me.id \
-                               and str(reaction_p) is "🖐"
+                               and str(reaction_p) == "🖐"
 
                     reaction, new_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=player_check)
 
@@ -200,6 +209,164 @@ class Draft(Cog):
         # === Choosing how to choose teams ===
         await message.clear_reactions()
         await ctx.send("successful")
+
+    async def match(self, ctx, alpha: list, beta: list, captains: list, embed: discord.Embed, message):
+        maplist_str = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)[0][1]
+        mean_power_level = 0.0
+        for seq in (alpha, beta):
+            for player in seq:
+                player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)
+                mean_power_level += player_power
+        mean_power_level = mean_power_level / 8.0
+
+        num_players_redo = 0
+        total_num_games_played = 0
+        total_map_refreshes = 0
+
+        map_list = code_parser.parse_code_format(maplist_str)
+
+        embed.clear_fields()
+        embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha))
+        embed.add_field(name="Beta Team", value=self.gen_player_str(beta))
+        map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
+        map_mode_list = map_mode.split("-")
+
+        map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
+        embed.add_field(name="Mode + Stage", value=map_mode, inline=False)
+        embed.add_field(name="Average Power Level", value=str(mean_power_level), inline=False)
+        embed.add_field(name="Status", value=GAME_STATUS.format(str(total_num_games_played)))
+
+        file = discord.File(map_file, filename="map.png")
+        embed.set_image(url="attachment://map.png")
+
+        await message.edit(file=file, embed=embed)
+
+        await message.add_reaction("⛔️")
+        await message.add_reaction("🔄")
+
+        while total_num_games_played < math.ceil(BEST_OF / 2.0):
+            try:
+                def set_check(reaction_s, user_s):  # has to be a player/captain and not the bot
+                    return (user_s in alpha or user_s in beta or user_s in captains) and user_s.id is not ctx.me.id
+
+                reaction, player = await self.bot.wait_for('reaction_add', timeout=(60*3), check=set_check)
+
+                if str(reaction) == "⛔":
+                    await embed.clear_fields()
+                    await message.clear_reactions()
+                    embed.add_field(name="Status", value="Need a sub. If you want to sub, react with `🖐`.\n"
+                                                         "Lobby will auto-close in 10 minutes if a sub could not "
+                                                         "be found.")
+                    await message.add_reaction("🖐")
+                    await message.edit(file=None, embed=embed)
+
+                    try:
+                        def sub_check(reaction_sub, user_sub):  # has to be a player not in the lobby, not the bot,
+                                                                # and reacted
+                            return (user_sub not in alpha or user_sub not in beta or user_sub not in captains) and \
+                                   user_sub.id is not ctx.me.id and str(reaction_sub) == "🖐"
+
+                        # wait for a sub to react
+                        reaction, sub = await self.bot.wait_for('reaction_add', timeout=(60.0 * 10), check=sub_check)
+
+                        # clear fields and reactions
+                        await embed.clear_fields()
+                        await message.clear_reactions()
+
+                        # remove old player
+                        if player in alpha:
+                            alpha.remove(player)
+                        elif player in beta:
+                            beta.remove(player)
+                        elif player in captains:
+                            captains.remove(player)
+
+                        if len(captains) != NUM_CAPTAINS:  # choose a random player to be captain if the captain left
+                            if len(alpha) != LOBBY_SIZE / 2.0:
+                                captains.append(alpha[random.randint(0, len(alpha))])
+                            else:
+                                captains.append(beta[random.randint(0, len(beta))])
+
+                        if len(alpha) != LOBBY_SIZE / 2.0:  # regardless just append the new player
+                            alpha.append(sub)
+                        else:
+                            beta.append(sub)
+
+                        for seq in (alpha, beta):  # re-calculate mean power level
+                            for player in seq:
+                                player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)
+                                mean_power_level += player_power
+                        mean_power_level = mean_power_level / 8.0
+
+                        embed.set_field_at(index=4, name="Status", value="Thank you for subbing {}! If the captain "
+                                                                         "left, I randomly choose someone in the team "
+                                                                         "to be the captain.\n"
+                                                                         "Returning to the draft...".format(sub.mention)
+                                           , inline=False)
+                        await message.clear_reactions()
+                        await message.edit(embed=embed)
+
+                        with ctx.channel.typing():
+                            await asyncio.sleep(5)
+
+                        continue
+                    except asyncio.TimeoutError:
+                        await embed.clear_fields()
+                        await message.edit(content="Could not find a sub in time. Closing lobby.", embed=None)
+
+                        if total_num_games_played > 0:
+                            pass  # TODO send final score out to channel
+                        return
+                elif str(reaction) == "🔄" and total_map_refreshes < 2:
+                    num_players_redo += 1
+                    status_str = GAME_STATUS.format(total_num_games_played) + " We need {} more people to redo the " \
+                                                                              "stage-mode.".format(str(
+                                                                            REDO_MAP_MODE_THRESHOLD - num_players_redo))
+
+                    if REDO_MAP_MODE_THRESHOLD - num_players_redo == 0:  # if we met the threshold do a reset
+                        num_players_redo = 0
+                        total_map_refreshes += 1
+                        map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
+                        map_mode_list = map_mode.split("-")
+                        map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
+                        embed.set_field_at(index=2, name="Mode + Stage", value=map_mode, inline=False)
+
+                        file = discord.File(map_file, filename="map.png")
+                        embed.set_image(url="attachment://map.png")
+
+                        await message.edit(file=file, embed=embed)
+                        continue
+
+                    embed.set_field_at(index=4, name="Status", value=status_str, inline=False)
+
+            except asyncio.TimeoutError:
+                pass  # add score report
+
+            embed.clear_fields()
+            embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha))
+            embed.add_field(name="Beta Team", value=self.gen_player_str(beta))
+            map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
+            map_mode_list = map_mode.split("-")
+
+            map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
+            embed.add_field(name="Mode + Stage", value=map_mode, inline=False)
+            embed.add_field(name="Average Power Level", value=str(mean_power_level), inline=False)
+            embed.add_field(name="Status", value=GAME_STATUS.format(str(total_num_games_played)))
+
+            file = discord.File(map_file, filename="map.png")
+            embed.set_image(url="attachment://map.png")
+
+            await message.edit(file=file, embed=embed)
+
+            await message.add_reaction("⛔️")
+            await message.add_reaction("🔄")
+            await message.add_reaction("⚠️")
+
+
+
+
+
+
 
     @staticmethod
     def gen_player_str(players: list):
