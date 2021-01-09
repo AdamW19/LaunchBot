@@ -49,6 +49,7 @@ class Staff(Cog):
     @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["map-pool", "map", "pool"])
     async def mappool(self, ctx, *args):
         # if no arguments given, get the current map list from the db
+        await self.init_settings_table(ctx)
         if len(args) == 0:
             map_list = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
             map_list = map_list[0][1]
@@ -144,18 +145,18 @@ class Staff(Cog):
             await ctx.guild.get_channel(config.launchpoint_announcement_id).send(launchpoint_role.mention + " Season " +
                                                                                  str(season_num) + " has started!")
 
-    @commands.command()
-    async def join(self, ctx):
-        # TODO remove debug command
-        guild_id = ctx.guild.id
-        current_time = int(time.time())
-        self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, current_time, 0))
-
     @commands.command(name="tent", aliases=["tenta"])
     async def best_weapon(self, ctx):
         # mako zones best zones
         await ctx.send("https://cdn.discordapp.com/attachments/743901312718209154/791250962798215198/video0.mov")
 
+    async def init_settings_table(self, ctx):
+        # Initializes the settings table
+        guild_id = ctx.guild.id
+        current_time = int(time.time())
+        settings_db = self.bot.db.execute_query(db_strings.GET_SETTINGS, guild_id)
+        if len(settings_db) == 0:
+            self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, current_time, 0))
 
 def setup(bot):
     bot.add_cog(Staff(bot))

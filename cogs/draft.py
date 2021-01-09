@@ -52,6 +52,26 @@ class Draft(Cog):
     @commands.command(case_insensitive=True)
     @commands.has_role("LaunchPoint")
     async def draft(self, ctx):
+
+        # Checks to make sure the server has an entry in the settings table and that the maplist is valid
+        settings_db = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
+        if len(settings_db) == 0:
+            await ctx.send(":x: No maplist found. Please ask the developers or the staff for help.")
+            return
+        else:
+            maplist = settings_db[0][1]
+            parsed_maplist = code_parser.parse_code_dict(maplist)
+            if "error" in parsed_maplist:
+                await ctx.send(":x: Invalid maplist found. Please ask the developers or the staff for help.")
+                return
+
+            season_start = datetime.fromtimestamp(settings_db[0][5], tz=pytz.utc)
+            season_end = datetime.fromtimestamp(settings_db[0][6], tz=pytz.utc)
+            # checks to make sure the season hasn't ended
+            if season_start > datetime.now(pytz.utc) or (season_end <= datetime.now(pytz.utc) or settings_db[0][7] == 0):
+                await ctx.send(":x: The current season has ended or is on pause.")
+                return
+
         # Ping LaunchPoint members
         # msg = '{}'.format(LaunchPoint.mention)
         # await ctx.send('<@&795214612576469022>')
