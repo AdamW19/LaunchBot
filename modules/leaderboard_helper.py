@@ -64,7 +64,7 @@ def parse_leaderboard(leaderboard, offset):  # this parses the leaderboard dict 
         player = leaderboard[i]
         player_id = player[0]
         player_total_games = player[1]
-        player_rank = round(float(player[2]), 2)  # we wanna round the rank to 2 decimal places, a la profiles
+        player_rank = round(player[2], 2)  # we wanna round the rank to 2 decimal places, a la profiles
 
         # Skip if the player hasn't played enough games or if the player isn't in the server anymore
         if player_total_games < MATCH_THRESHOLD:  # or self.bot.get_user(player_id) is None: TODO remove comment
