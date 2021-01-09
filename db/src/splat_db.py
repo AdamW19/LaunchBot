@@ -36,7 +36,7 @@ class SplatoonDB(Database):
         current_time = int(time.time())
 
         # last update of old season table, so we have end_time correct
-        self.execute_commit_query(db_strings.UPDATE_SEASON, (current_season, current_start_time, leaderboard_msg_id,
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (current_season, leaderboard_msg_id, current_start_time,
                                                              current_time, server_id))
 
         # Finalize the global leaderboard, lock is needed to prevent double edits to the leaderboard
@@ -69,7 +69,7 @@ class SplatoonDB(Database):
     def update_season_end(self, server_id: int):
         # Disables or enables the season
         season_end_status = self.execute_query(db_strings.GET_SETTINGS, server_id)
-        season_end_status = season_end_status[0][5]
+        season_end_status = season_end_status[0][6]
 
         if season_end_status is 0:
             end_time = int(time.time())

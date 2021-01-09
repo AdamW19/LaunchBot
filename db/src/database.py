@@ -19,6 +19,10 @@ class Database:
         self.filename = db_filename
         self.file_name_format = file_format
 
+    def switch_db(self, new_filename: str):
+        self.conn = sqlite3.connect(new_filename)
+        self.filename = new_filename
+
     def execute_commit_query(self, unformatted_query: str, arguments: tuple):
         """ Does a query commits it, no return """
         if not isinstance(arguments, tuple):
@@ -59,5 +63,4 @@ class Database:
         # follows format provided
         new_filename = self.file_name_format.format(season_num)
         copy(self.filename, new_filename)
-        self.conn = sqlite3.connect(new_filename)
-        self.filename = new_filename
+        self.switch_db(new_filename)

@@ -36,8 +36,8 @@ class Staff(Cog):
                                                "the current map pool according to the given code and send the updated"
                                                "map pool to a provided channel.", inline=False)
         embed.add_field(name="Season", value="The subcommand for season is `draft` and `launchpoint`.\n "
-                                             "You can provide `pause`, `timeout`, `reopen`, or `open` as an argument "
-                                             "to temporarily close or to reopen the season.\n "
+                                             "You can provide `pause`, `switch`, `timeout`, `reopen`, or `open` as an"
+                                             " argument to temporarily close or to reopen the season.\n "
                                              "You can also provide `start`. `init`, or `open` as an argument to start "
                                              "a season.", inline=False)
         embed.add_field(name="Eggs", value="Type `l?tenta` or `l?tent` for the best weapon", inline=False)
@@ -84,17 +84,18 @@ class Staff(Cog):
     async def season(self, ctx):
         # Season specific help
         await ctx.send(":x: You must provide an argument to stop the season or to start the season:\n"
-                       "To pause the season, provide `pause`, `timeout`, `reopen`, or `open` to pause/continue the "
-                       "season.\n "
+                       "To toggle the season, provide `pause`, `switch`, `timeout`, `reopen`, or `open` to "
+                       "pause/continue the season.\n "
                        "To start a new season, provide `start`, `init`, or `open` as an argument.\n"
                        "Type `l?settings` for a list of commands and their use cases.")
 
-    @season.group(case_insensitive=True, invoke_without_command=True, aliases=["pause", "timeout", "reopen", "open"])
+    @season.group(case_insensitive=True, invoke_without_command=True, aliases=["pause", "switch", "timeout", "reopen",
+                                                                               "open"])
     async def toggle_season(self, ctx):
         # Toggle status, and make sure it was saved into the db
         self.bot.db.update_season_end(ctx.guild.id)
         season_status = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
-        season_status = season_status[0][5]  # if end time is 0, it reopened; otherwise it closed
+        season_status = season_status[0][6]  # if end time is 0, it reopened; otherwise it closed
         if season_status is 0:
             await ctx.send(":white_check_mark: Successfully reopened the season.")
         else:

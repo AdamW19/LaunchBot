@@ -32,7 +32,7 @@ class Leaderboard(Cog):
 
             # embed is none iff there's no one on the leaderboard
             if embed is not None:
-                # on first run or on reboot, get the db entry (also check if internal lb id ≠ db id at season change
+                # on first run or on reboot, get the db entry (also check if internal lb id ≠ db id at season change.
                 if self.global_lb_mes is None or self.global_lb_mes.id is not db_leaderboard:
                     # if it doesn't exist, make a new one and safe that as the global leaderboard
                     if db_leaderboard is None or db_leaderboard is 0:
@@ -40,9 +40,10 @@ class Leaderboard(Cog):
                                                                                                             embed=embed)
                         self.db.execute_commit_query(db_strings.UPDATE_LEADERBOARD, (self.global_lb_mes.id,
                                                                                      config.launchpoint_server_id))
-                    else:  # otherwise use the existing one as the leaderboard
+                    else:  # otherwise use the existing one as the leaderboard and exit
                         self.global_lb_mes = await self.bot.get_channel(config.launchpoint_leaderboard_id).\
                             fetch_message(db_leaderboard)
+                        await self.global_lb_mes.edit(embed=embed)
                 else:  # if we have the message update the leaderboard
                     await self.global_lb_mes.edit(embed=embed)
             await asyncio.sleep(20)  # TODO change this to a better value
@@ -57,7 +58,7 @@ class Leaderboard(Cog):
 
         # Makes embeds for pagination, we want 5 10-player sized embeds sorta like the global leaderboard
         for i in range(0, LEADERBOARD_SIZE, MAIN_LEADERBOARD_LIM):
-            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season))  # TODO fix empty embeds
+            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season))
 
         # Sets up pagination, thank you libraries
         paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx=ctx, remove_reactions=True, auto_footer=True)

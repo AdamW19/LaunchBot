@@ -22,19 +22,20 @@ help_embed_fields = {
          },
     "leaderboard_commands":
         {"title": "Leaderboard Commands",
-         "body": "`l?leaderboard` - Shows a paginated leaderboard of the top 50 players from the current season. You"
+         "body": "`l?leaderboard` - Shows a paginated leaderboard of the top 50 players from the current season. You "
                  "may use `l`, `rank`, or `ranks` in in lieu of `leaderboard`."
          },
     "misc_commands":
         {"title": "Misc. Commands",
          "body": "`l?help` - view the help pages for LaunchBot.\n"
                  "`l?ping` - tests to see if LaunchBot is functioning properly (also shows ping time).\n"
-                 "`l?special_thanks` - a special thank you to the ones that made LaunchBot possible."
+                 "`l?special_thanks` - a special thank you to the ones that made LaunchBot possible.\n"
+                 "`l?data` - allows you to download or delete your data from our databases."
          },
     "staff_commands":
         {
             "title": "Staff Commands -- `Staff` role required",
-            "body": "`l?settings` - for a list of all staff commands.\n"
+            "body": "`l?staff` - for a list of all staff commands.\n"
         },
     "command_syntax":
         {"title": "Command Syntax",
@@ -45,7 +46,7 @@ help_embed_fields = {
                  "1. `l?schedule regular`\n"
                  "2. `l?rotation salmon next`\n"
                  "3. `l?profile set 0000-0000-0000`\n"
-                 "3. `l?settings season start`\n"
+                 "3. `l?staff season start`\n"
          }
 }
 
@@ -90,3 +91,6 @@ def add_help_embed_footer_links(help_embed, bot):
     help_embed.add_field(name=":pray:  Special Thanks",
                          value="Type `l?special_thanks` to see any APIs and technologies used to make " +
                                bot.user.name + ".")
+    help_embed.add_field(name=":warning:  Data Handling",
+                         value="In accordance of GPDR and CCPA, we are required to allow you to delete or download "
+                               "your data. Type `l?data` for more information.")

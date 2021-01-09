@@ -13,9 +13,6 @@ class Rotation(commands.Cog):
         self.bot = bot
         self.splatnet = Splatnet(session=bot.session)
 
-    async def on_ready(self):
-        self.splatnet.connection = self.bot.session  # sometimes for no reason bot.session doesn't get init-ed properly
-
     @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["schedule", "schedules", "rotations",
                                                                                  "info", "r"])
     async def rotation(self, ctx):
@@ -68,6 +65,9 @@ class Rotation(commands.Cog):
         await self.make_next_rotation(ModeTypes.REGULAR, ctx, False)
 
     async def make_single_rotation(self, schedule_type: ModeTypes, ctx):
+        if self.splatnet.connection is None:  # sometimes for no reason bot.session doesn't get init-ed properly
+            self.splatnet.connection = self.bot.session
+
         channel_id = ctx.channel.id
         time = datetime.now()
 
@@ -94,12 +94,17 @@ class Rotation(commands.Cog):
                 await ctx.send(":x: Not able to get rotation information. Contact the developers.")
 
     async def make_next_rotation(self, schedule_type: ModeTypes, ctx, overflow: bool):
+        if self.splatnet.connection is None:  # sometimes for no reason bot.session doesn't get init-ed properly
+            self.splatnet.connection = self.bot.session
+
         channel_id = ctx.channel.id
         time = datetime.now()
 
         rotation = SplatoonRotation(time, schedule_type, self.splatnet)
         await rotation.populate_data()
-        rotation.target_time = rotation.next_rotation
+        time = rotation.next_rotation
+        await rotation.clear_next_data()
+        rotation.target_time = time
         success = await rotation.populate_data()
 
         if success:

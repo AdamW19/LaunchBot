@@ -23,6 +23,7 @@ INIT_TEAM_TABLE = ("CREATE TABLE IF NOT EXISTS Team ("
                    "team_id INTEGER PRIMARY KEY,"
                    "player_id INTEGER NOT NULL,"
                    "is_sub INTEGER NOT NULL,"
+                   "is_captain INTEGER NOT NULL,"
                    "FOREIGN KEY (player_id)"
                    "REFERENCES Player (player_id)"
                    "ON DELETE NO ACTION "
@@ -62,8 +63,8 @@ INSERT_PLAYER = ("INSERT INTO Player(player_id, rank_mu, rank_sigma, num_game_wi
                  "num_set_win, num_set_loss)"
                  "VALUES (?, ?, ?, ?, ?, ?, ?)")
 
-INSERT_TEAM = ("INSERT INTO Team(team_id, player_id, is_sub)"
-               "VALUES (?, ?, ?)")
+INSERT_TEAM = ("INSERT INTO Team(team_id, player_id, is_sub, is_captain)"
+               "VALUES (?, ?, ?, ?)")
 
 INSERT_SCRIM = ("INSERT INTO Scrim(scrim_id, alpha_team, beta_team, alpha_score, beta_score)"
                 "VALUES(?, ?, ?, ?, ?)")
@@ -80,9 +81,14 @@ GET_PLAYER = "SELECT * FROM Player WHERE player_id = ?"
 
 GET_TEAM = "SELECT * FROM Team WHERE team_id = ?"
 
+GET_TEAM_VIA_PLAYER = "SELECT * FROM Team WHERE player_id = ?"
+
 GET_TEAM_PLAYER = "SELECT * FROM Team WHERE team_id = ? AND player_id = ?"
 
+
 GET_SCRIM = "SELECT * FROM Scrim WHERE scrim_id = ?"
+
+GET_SCRIM_VIA_TEAM = "SELECT * FROM Scrim WHERE alpha_team = ? OR beta_team = ?"
 
 GET_SETTINGS = "SELECT * FROM Settings WHERE server_id = ?"
 
@@ -115,6 +121,10 @@ UPDATE_TEAM_SUB = ("UPDATE Team "
                    "SET is_sub = ? "
                    "WHERE team_id = ? AND player_id = ?")
 
+UPDATE_TEAM_CAPTAIN = ("UPDATE Team "
+                       "SET is_captain = ? "
+                       "WHERE team_id = ? AND player_id = ?")
+
 UPDATE_SCRIM_SCORE = ("UPDATE Scrim "
                       "SET alpha_score = ?, "
                       "beta_score = ? "
@@ -144,6 +154,10 @@ UPDATE_LAST_SCRIM = ("UPDATE Settings "
                      "WHERE server_id = ?")
 
 DELETE_PROFILE = "DELETE FROM Profile WHERE player_id = ?"
+
+DELETE_PLAYER = "DELETE FROM Player WHERE player_id = ?"
+
+DELETE_TEAM_PLAYER = "DELETE FROM Team WHERE player_id = ?"
 
 DROP_PLAYER_TABLE = "DROP TABLE Player"
 

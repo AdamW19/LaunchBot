@@ -3,7 +3,7 @@
 from enum import Enum, auto
 from modules.splatnet import Splatnet
 from datetime import datetime
-from modules.linked_list import LinkedList
+from modules.linked_list import LinkedList  # Ignore if there's an error here
 from modules.salmon_emotes import gen_emote_id, SR_TERM_CHAR
 
 IMAGE_BASE = "https://splatoon2.ink/assets/splatnet"
@@ -33,6 +33,16 @@ class SplatoonRotation:
         if mode_type is ModeTypes.SALMON:
             self.weapons_array = None  # For salmon run only
 
+    async def clear_next_data(self):
+        # Clears out any populated data
+        self.stages = []
+        self.stage_images = []
+        self.start_time = None
+        self.end_time = None
+        self.next_rotation = None
+        if self.mode is ModeTypes.SALMON:
+            self.weapons_array = None  # For salmon run only
+
     async def populate_data(self):
         timestamp = self.target_time.timestamp()
         data = None
@@ -40,7 +50,7 @@ class SplatoonRotation:
 
         # Checking to see if splatfest is happening, the 0th elm is going to be the most recent one
         if self.mode_type is not ModeTypes.SALMON and (splatfest_info["times"]["start"] <= timestamp <
-                                                       splatfest_info["times"]["end"] or True):
+                                                       splatfest_info["times"]["end"]):
             data = await self.splatnet.get_turf()
             self.mode_type = ModeTypes.SPLATFEST  # gotta remember to update the mode
             self.stages.append(splatfest_info["special_stage"]["name"])

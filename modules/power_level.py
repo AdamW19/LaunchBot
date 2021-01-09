@@ -22,9 +22,6 @@ class Player:
     def __str__(self):
         return "Player {} with mu = {} and sigma = {}".format(self.player_id, self.rating.mu, self.rating.sigma)
 
-    def __hash__(self):
-        return hash(str(self))
-
     def to_database(self):
         # returns what is needed for the database
         return self.player_id, self.active_sub, self.rating.mu, self.rating.sigma
@@ -57,9 +54,6 @@ class Team:
             team_str += "\nCaptain is player {}".format(self.captain.player_id)
 
         return team_str
-
-    def __hash__(self):
-        return hash(str(self))
 
     def to_database(self):
         # returns what is needed for the database
@@ -98,7 +92,6 @@ team_a.add_sub(Player(env, 8))
 team_b.inactive_players.append(Player(env, 9))
 
 print(team_a)
-print(hash(team_a))
 
 print(team_b)
-print(hash(team_b))'''
+'''

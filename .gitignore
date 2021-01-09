@@ -5,6 +5,7 @@ config.py
 ./*.png
 ./*.gif
 *.db
+*.csv
 
 .DS_Store
 */.DS_Store

@@ -6,20 +6,21 @@ import os
 import asyncio
 import config
 from modules import checks
-import glob
 from db.src.splat_db import SplatoonDB, db_strings
 from db.src.database import DB_FILE_BASE
+from db.src.data_db import get_all_db_files
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard", "cogs.draft"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard", "cogs.draft", "cogs.data"]
+
 
 DB_FILENAME_FMT = "season-{}.db"
 
 
-def get_db_file():
+def get_recent_db():
     # Gets the most recently used db file from the db folder
-    list_of_files = glob.glob(DB_FILE_BASE + "*.db")
+    list_of_files = get_all_db_files()
     if len(list_of_files) == 0:
         latest_file = DB_FILE_BASE + DB_FILENAME_FMT.format(0)
     else:
@@ -38,13 +39,13 @@ class LPBot(commands.Bot):
 
         super().__init__(command_prefix=config.prefix, case_insensitive=True, intents=intents)
         self.session = None
-        self.db = SplatoonDB(file_name=get_db_file(), file_format=DB_FILE_BASE + DB_FILENAME_FMT)
+        self.db = SplatoonDB(file_name=get_recent_db(), file_format=DB_FILE_BASE + DB_FILENAME_FMT)
 
         print("[LPBot] Loading extensions...")
         for e in extensions:
             self.load_extension(e)
 
-        # Deletes any .gifs or .pngs made during gif generation for rotation commands
+        # Deletes any temp files
         self.loop.create_task(self.garbage_collector())
 
         # Assigns self.session an aiohttp session because you need to assign it async
@@ -66,13 +67,16 @@ class LPBot(commands.Bot):
 
     async def garbage_collector(self):
         # Removes all .gif and .png files from gif generation for lobby/rotation info
+        # Also removes .csv files from data requests
         await self.wait_until_ready()
         while not self.is_closed():
-            print("[LPBot] Deleting old files...")
+            print("[LPBot] Deleting temp files...")
+            num_files_deleted = 0
             for f in os.listdir():
-                if f.endswith(".gif") or f.endswith(".png"):
+                if f.endswith(".gif") or f.endswith(".png") or f.endswith(".csv"):
                     os.remove(f)
-            print("[LPBot] Deleted all old files")
+                    num_files_deleted += 1
+            print("[LPBot] Deleted {} temp files".format(num_files_deleted))
             await asyncio.sleep(300)  # removes every 5 min/300 sec
 
     async def on_guild_join(self, guild):
