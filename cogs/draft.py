@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 from datetime import datetime
-from enum import Enum, auto
 import pytz
 import random
 import math
@@ -20,11 +19,21 @@ from img.stages.test import FILE_PREFIX
 # TODO this whole thing needs more testing and general refactoring
 
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 2
+LOBBY_SIZE = 4
+LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
 REDO_MAP_MODE_THRESHOLD = 4
 BEST_OF = 7
+
+EMOTE_TO_INT = {
+    "1️⃣": 1,
+    "2️⃣": 2,
+    "3️⃣": 3,
+    "4️⃣": 4,
+    "5️⃣": 5,
+    "6️⃣": 6
+}
 
 REMAINING_STR = "Needs {} more player(s)"
 TIME_REMAINING = "{} more minutes before draft closes."
@@ -225,9 +234,9 @@ class Draft(Cog):
         await message.add_reaction("2️⃣")
 
         # Move all players to a dictionary with corresponding emote
-        players_remaining = {}
-        for i in range(len(players)):
-            players_remaining[EMOTE_NUM[i]] = players[i]
+        players_remaining = []
+        for player in players:
+            players_remaining.append(player)
 
         # Lists for each team
         alpha = []
@@ -245,7 +254,7 @@ class Draft(Cog):
                 embed.set_field_at(index=0, name="Alpha Team", value=captA.mention)
                 embed.set_field_at(index=1, name="Bravo Team", value=captB.mention)
                 embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                   value=self.gen_players_remaining_str(players_remaining.values()))
+                                   value=self.gen_players_remaining_str(players_remaining))
                 embed.add_field(inline=False, name="Current Pick", value=captA.mention)
                 await message.edit(embed=embed)
                 await message.clear_reactions()
@@ -256,14 +265,14 @@ class Draft(Cog):
                 await message.add_reaction("5️⃣")
                 await message.add_reaction("6️⃣")
 
-            def captain_a_check(reaction_c, user_c, curr_captA):
-                    if type(reaction_c.emoji) is str and (str(reaction_c) == '1️⃣' or str(reaction_c) == '2️⃣'
-                                                        or str(reaction_c) == '3️⃣' or str(reaction_c) == '4️⃣'
-                                                        or str(reaction_c) == '5️⃣' or str(reaction_c) == '6️⃣'):
+            curr_captA = True
+
+            def captain_a_check(reaction_c, user_c):
+                    if type(reaction_c.emoji) is str and str(reaction_c) in EMOTE_NUM:
                         if curr_captA:
-                            return user_c.mentions == captA.mention and user_c.id is not ctx.me.id
+                            return user_c.id == captA.id and user_c.id is not ctx.me.id
                         else:
-                            return user_c.mentions == captB.mention and user_c.id is not ctx.me.id
+                            return user_c.id == captB.id and user_c.id is not ctx.me.id
                     return False
 
             # 2 functions for 2 different draft styles
@@ -272,25 +281,25 @@ class Draft(Cog):
                 curr_captA = True
                 for i in range(len(players)):
                     try:
-                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=captain_a_check(curr_captA))
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=captain_a_check)
 
                     except asyncio.TimeoutError:
-                        keys = players_remaining.keys()
-                        num = random.randint(0, len(keys))
-                        reaction = players_remaining[num]
+                        num = random.randint(0, len(players_remaining))
+                        reaction = EMOTE_NUM[num]
 
-                    if curr_captA:
-                        alpha.append(players_remaining[str(reaction)])
-                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
                     else:
-                        bravo.append(players_remaining[str(reaction)])
-                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
-                    curr_captA = not curr_captA
-                    players_remaining.pop(str(reaction))
-                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                       value=self.gen_players_remaining_str(players_remaining))
-                    await message.edit(embed=embed)
-                    await reaction.clear()
+                        choosen_player = players_remaining.pop(EMOTE_TO_INT[str(reaction)])
+                        if curr_captA:
+                            alpha.append(choosen_player)
+                            embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
+                        else:
+                            bravo.append(choosen_player)
+                            embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+                        curr_captA = not curr_captA
+                        embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                           value=self.gen_players_remaining_str(players_remaining))
+                        await message.edit(embed=embed)
+                        await reaction.clear()
 
             async def snake_draft(captA, captB):
                 await start_draft_embed(captA, captB)
@@ -298,27 +307,27 @@ class Draft(Cog):
                 for i in range(len(players)):
                     try:
                         reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0,
-                                                                 check=captain_a_check(curr_captA))
+                                                                 check=captain_a_check)
 
                     except asyncio.TimeoutError:
-                        keys = players_remaining.keys()
-                        num = random.randint(0, len(keys))
+                        num = random.randint(0, len(players_remaining))
                         reaction = players_remaining[num]
 
-                    if curr_captA:
-                        alpha.append(players_remaining[str(reaction)])
-                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
                     else:
-                        bravo.append(players_remaining[str(reaction)])
-                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+                        choosen_player = players_remaining.pop(EMOTE_TO_INT[str(reaction)])
+                        if curr_captA:
+                            alpha.append(choosen_player)
+                            embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
+                        else:
+                            bravo.append(choosen_player)
+                            embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
 
-                    if i == 0 or i == 2 or i == 4:
-                        curr_captA = not curr_captA
-                    players_remaining.pop(str(reaction))
-                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                       value=self.gen_players_remaining_str(players_remaining))
-                    await message.edit(embed=embed)
-                    await reaction.clear()
+                        if i == 0 or i == 2 or i == 4:
+                            curr_captA = not curr_captA
+                        embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                           value=self.gen_players_remaining_str(players_remaining))
+                        await message.edit(embed=embed)
+                        await reaction.clear()
 
             # Ask captains to agree on draft format
             try:
@@ -433,7 +442,8 @@ class Draft(Cog):
                 if str(reaction) == "⛔":
                     await embed.clear_fields()
                     await message.clear_reactions()
-                    embed.add_field(name="Status", value="Need a sub. If you want to sub, react with `🖐`.\n"
+                    embed.add_field(name="Status", value="Need a sub, feel free to ping again.. If you want to sub, "
+                                                         "react with `🖐`.\n"
                                                          "Lobby will auto-close in 10 minutes if a sub could not "
                                                          "be found.")
                     await message.add_reaction("🖐")
@@ -562,10 +572,10 @@ class Draft(Cog):
                         elif lobby_player in captains:
                             num_captains_agree[1] += 1
 
-                    if num_captains_agree[0] == captains or num_players_agree[0] >= (LOBBY_SIZE / 2.0) + 1:
+                    if num_captains_agree[0] == captains or num_players_agree[0] >= LOBBY_THRESHOLD:
                         alpha_wins += 1
                         result = power_level.Result.ALPHA_WIN
-                    elif num_captains_agree[1] == captains or num_players_agree[1] >= (LOBBY_SIZE / 2.0) + 1:
+                    elif num_captains_agree[1] == captains or num_players_agree[1] >= LOBBY_THRESHOLD:
                         bravo_wins += 1
                         result = power_level.Result.BETA_WIN
                     else:
@@ -706,11 +716,10 @@ class Draft(Cog):
         return player_str
 
     @staticmethod
-    def gen_players_remaining_str(players_remaining: dict):
+    def gen_players_remaining_str(players_remaining: list):
         player_str = ""
-        remaining_keys = players_remaining.keys()
-        for emote in remaining_keys:
-            player_str += players_remaining[emote] + " " + emote + "\n"
+        for i in range(len(players_remaining)):
+            player_str += players_remaining[i].mention + " " + EMOTE_NUM[i] + "\n"
         return player_str
 
     @staticmethod
