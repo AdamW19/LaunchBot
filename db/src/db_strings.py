@@ -80,6 +80,8 @@ GET_PLAYER = "SELECT * FROM Player WHERE player_id = ?"
 
 GET_TEAM = "SELECT * FROM Team WHERE team_id = ?"
 
+GET_TEAM_PLAYER = "SELECT * FROM Team WHERE team_id = ? AND player_id = ?"
+
 GET_SCRIM = "SELECT * FROM Scrim WHERE scrim_id = ?"
 
 GET_SETTINGS = "SELECT * FROM Settings WHERE server_id = ?"
