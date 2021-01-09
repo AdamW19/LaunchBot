@@ -18,8 +18,9 @@ from img.stages.test import FILE_PREFIX
 
 # TODO this whole thing needs more testing and general refactoring
 
+SERVER_ID = 1234567890
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 4
+LOBBY_SIZE = 2
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
@@ -164,7 +165,7 @@ class Draft(Cog):
                         return user_c in captains and user_c.id is not ctx.me.id
                     return False
 
-                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=5.0, check=captain_check)
+                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=captain_check)
                 embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
                 embed.set_field_at(index=1, name="Captain?", value="Would anyone like to be the captain? React with "
                                                                    "`🖐` to be the captain within the next 15 "
@@ -313,27 +314,32 @@ class Draft(Cog):
                 for i in range(len(players)):
                     try:
                         reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0,
-                                                                 check=captain_a_check)
+                                                                 check=lambda x, y: curr_captain_check(x, y,
+                                                                                                       curr_captA))
 
                     except asyncio.TimeoutError:
                         num = random.randint(0, len(players_remaining))
-                        reaction = players_remaining[num]
+                        keys = players_remaining.keys()
+                        reaction = keys[num]
 
+                    choosen_player = players_remaining.pop(str(reaction))
+                    if curr_captA:
+                        alpha.append(choosen_player)
+                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
                     else:
-                        choosen_player = players_remaining.pop(EMOTE_TO_INT[str(reaction)])
-                        if curr_captA:
-                            alpha.append(choosen_player)
-                            embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
-                        else:
-                            bravo.append(choosen_player)
-                            embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+                        bravo.append(choosen_player)
+                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
 
-                        if i == 0 or i == 2 or i == 4:
-                            curr_captA = not curr_captA
-                        embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                           value=self.gen_players_remaining_str(players_remaining))
-                        await message.edit(embed=embed)
-                        await reaction.clear()
+                    if i == 0 or i == 2 or i == 4:
+                        curr_captA = not curr_captA
+
+                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                       value=self.gen_players_remaining_str(players_remaining))
+                    embed.set_field_at(inline=False, index=3, name="Current Pick",
+                                       value=captA if curr_captA else captB)
+
+                    await message.edit(embed=embed)
+                    await reaction.clear()
 
             # Ask captains to agree on draft format
             try:
