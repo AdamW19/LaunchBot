@@ -164,7 +164,7 @@ class Draft(Cog):
                         return user_c in captains and user_c.id is not ctx.me.id
                     return False
 
-                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=captain_check)
+                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=5.0, check=captain_check)
                 embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
                 embed.set_field_at(index=1, name="Captain?", value="Would anyone like to be the captain? React with "
                                                                    "`🖐` to be the captain within the next 15 "
@@ -234,9 +234,9 @@ class Draft(Cog):
         await message.add_reaction("2️⃣")
 
         # Move all players to a dictionary with corresponding emote
-        players_remaining = []
-        for player in players:
-            players_remaining.append(player)
+        players_remaining = {}
+        for i in range(len(players)):
+            players_remaining[EMOTE_NUM[i]] = players[i]
 
         # Lists for each team
         alpha = []
@@ -265,15 +265,16 @@ class Draft(Cog):
                 await message.add_reaction("5️⃣")
                 await message.add_reaction("6️⃣")
 
-            curr_captA = True
+            #curr_captA = True
 
-            def captain_a_check(reaction_c, user_c):
-                    if type(reaction_c.emoji) is str and str(reaction_c) in EMOTE_NUM:
-                        if curr_captA:
-                            return user_c.id == captA.id and user_c.id is not ctx.me.id
-                        else:
-                            return user_c.id == captB.id and user_c.id is not ctx.me.id
-                    return False
+            def curr_captain_check(reaction_c, user_c, curr_captA):
+                keys = players_remaining.keys()
+                if type(reaction_c.emoji) is str and str(reaction_c) in keys:
+                    if curr_captA:
+                        return user_c.id == captA.id and user_c.id is not ctx.me.id
+                    else:
+                        return user_c.id == captB.id and user_c.id is not ctx.me.id
+                return False
 
             # 2 functions for 2 different draft styles
             async def alternate_draft(captA, captB):
@@ -281,25 +282,30 @@ class Draft(Cog):
                 curr_captA = True
                 for i in range(len(players)):
                     try:
-                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=captain_a_check)
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=lambda x, y: curr_captain_check(x, y, curr_captA))
 
                     except asyncio.TimeoutError:
                         num = random.randint(0, len(players_remaining))
-                        reaction = EMOTE_NUM[num]
+                        keys = players_remaining.keys()
+                        reaction = keys[num]
 
+                    choosen_player = players_remaining.pop(str(reaction))
+                    if curr_captA:
+                        alpha.append(choosen_player)
+                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
                     else:
-                        choosen_player = players_remaining.pop(EMOTE_TO_INT[str(reaction)])
-                        if curr_captA:
-                            alpha.append(choosen_player)
-                            embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
-                        else:
-                            bravo.append(choosen_player)
-                            embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
-                        curr_captA = not curr_captA
-                        embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                           value=self.gen_players_remaining_str(players_remaining))
-                        await message.edit(embed=embed)
-                        await reaction.clear()
+                        bravo.append(choosen_player)
+                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+
+                    curr_captA = not curr_captA
+
+                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                            value=self.gen_players_remaining_str(players_remaining))
+                    embed.set_field_at(inline=False, index=3, name="Current Pick",
+                                           value=captA if curr_captA else captB)
+
+                    await message.edit(embed=embed)
+                    await reaction.clear()
 
             async def snake_draft(captA, captB):
                 await start_draft_embed(captA, captB)
@@ -349,7 +355,7 @@ class Draft(Cog):
                         await alternate_draft(captA, captB)
                     elif str(reaction1) == "2️⃣":
                         await snake_draft(captA, captB)
-                        reactions_not_match = False
+                    reactions_not_match = False
                 else:
                     if str(reaction1) == "1️⃣" and str(reaction2) == "2️⃣":
                         await reaction1.remove(captA)
@@ -718,8 +724,10 @@ class Draft(Cog):
     @staticmethod
     def gen_players_remaining_str(players_remaining: list):
         player_str = ""
-        for i in range(len(players_remaining)):
-            player_str += players_remaining[i].mention + " " + EMOTE_NUM[i] + "\n"
+        if len(players_remaining) == 0:
+            return "None"
+        for emote, player in players_remaining.items():
+            player_str += player.mention + " " + emote + "\n"
         return player_str
 
     @staticmethod
