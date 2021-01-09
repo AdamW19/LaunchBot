@@ -12,7 +12,8 @@ from db.src.data_db import get_all_db_files
 
 print("[LPBot] Initializing...")
 
-EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard", "cogs.data"]
+EXTENSIONS = ["cogs.logs", "cogs.rotation", "cogs.help", "cogs.profiles", "cogs.staff", "cogs.leaderboard", "cogs.draft", "cogs.data"]
+
 
 DB_FILENAME_FMT = "season-{}.db"
 

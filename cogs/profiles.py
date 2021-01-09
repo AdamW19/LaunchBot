@@ -85,9 +85,15 @@ class Profiles(commands.Cog):
             else:
                 switch_fc = args[0][3:]  # we just want the numbers, not the prefix `SW-`
 
-            # On success, insert the new profile, print success message and the profile
-            self.db.execute_commit_query(db_strings.INSERT_PROFILE, (ctx.author.id, switch_fc))
-            await ctx.send(":white_check_mark: Profile successfully made:")
+            profile = self.db.execute_query(db_strings.GET_PROFILE, ctx.author.id)
+            if len(profile) == 0:
+                # On success, insert the new profile, print success message and the profile
+                self.db.execute_commit_query(db_strings.INSERT_PROFILE, (ctx.author.id, switch_fc))
+                await ctx.send(":white_check_mark: Profile successfully made:")
+            else:
+                self.db.execute_commit_query(db_strings.UPDATE_PROFILE, (switch_fc, ctx.author.id))
+                await ctx.send(":white_check_mark: Profile successfully updated:")
+
             embed = await self.gen_profile_embed(ctx.author)
             await ctx.send(embed=embed)
 

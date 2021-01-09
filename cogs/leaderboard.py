@@ -15,7 +15,7 @@ class Leaderboard(Cog):
         self.db = self.bot.db
         self.global_lb_mes = None  # the message that contains the global leaderboard
 
-        self.bot.loop.create_task(self.leaderboard_update())
+        # self.bot.loop.create_task(self.leaderboard_update())  # TODO remove comment
 
     async def leaderboard_update(self):
         await self.bot.wait_until_ready()

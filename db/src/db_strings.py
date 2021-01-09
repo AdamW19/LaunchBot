@@ -83,6 +83,9 @@ GET_TEAM = "SELECT * FROM Team WHERE team_id = ?"
 
 GET_TEAM_VIA_PLAYER = "SELECT * FROM Team WHERE player_id = ?"
 
+GET_TEAM_PLAYER = "SELECT * FROM Team WHERE team_id = ? AND player_id = ?"
+
+
 GET_SCRIM = "SELECT * FROM Scrim WHERE scrim_id = ?"
 
 GET_SCRIM_VIA_TEAM = "SELECT * FROM Scrim WHERE alpha_team = ? OR beta_team = ?"
