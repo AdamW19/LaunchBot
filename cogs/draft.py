@@ -19,7 +19,7 @@ from db.src import db_strings
 
 
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 8
+LOBBY_SIZE = 4
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
@@ -321,7 +321,7 @@ class Draft(Cog):
 
                     except asyncio.TimeoutError:
                         num = random.randint(0, len(players_remaining) - 1)
-                        keys = players_remaining.keys()
+                        keys = list(players_remaining.keys())
                         reaction = keys[num]
 
                     choosen_player = players_remaining.pop(str(reaction))
@@ -353,7 +353,7 @@ class Draft(Cog):
 
                     except asyncio.TimeoutError:
                         num = random.randint(0, len(players_remaining) - 1)
-                        keys = players_remaining.keys()
+                        keys = list(players_remaining.keys())
                         reaction = keys[num]
 
                     choosen_player = players_remaining.pop(str(reaction))
