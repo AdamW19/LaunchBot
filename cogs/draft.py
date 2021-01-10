@@ -19,7 +19,7 @@ from db.src import db_strings
 
 
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 8
+LOBBY_SIZE = 4 # TODO
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
@@ -34,7 +34,6 @@ DRAFT_PLAYER_TIMEOUT = (60 * 2)  # 120 sec or 2 min
 MATCH_TIMEOUT = (60 * 3)  # 180 sec or 3 min
 SUB_TIMEOUT = (60 * 10)  # 10 min
 SCORE_REPORT_TIMEOUT = (60 * 60 * 10)  # 10 hours
-
 
 
 EMOTE_TO_INT = {
@@ -459,7 +458,10 @@ class Draft(Cog):
                 self.db.execute_commit_query(db_strings.INSERT_PLAYER, (player.id, None, None, 0, 0, 0, 0))
                 player_power = 25.0  # default starting power level
             else:
-                player_power = float(player_db[0][1])
+                if player_db[0][1] is not None:
+                    player_power = float(player_db[0][1])
+                else:
+                    player_power = 25.0
             mean_power_level += player_power
         mean_power_level = round(mean_power_level / 8.0, 0)
 
