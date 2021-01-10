@@ -20,7 +20,7 @@ from img.stages.test import FILE_PREFIX
 
 SERVER_ID = 1234567890
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 4  # TODO change back to 8
+LOBBY_SIZE = 2  # TODO change back to 8
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
@@ -489,7 +489,7 @@ class Draft(Cog):
                     try:
                         def sub_check(reaction_sub, user_sub):  # has to be a player not in the lobby, not the bot,
                                                                 # and reacted
-                            return (user_sub not in alpha or user_sub not in bravo or user_sub not in captains) and \
+                            return user_sub not in alpha and user_sub not in bravo and \
                                    user_sub.id is not ctx.me.id and str(reaction_sub) == "🖐"
 
                         # wait for a sub to react
