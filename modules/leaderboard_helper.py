@@ -14,11 +14,12 @@ async def finalize_leaderboard(msg_id: int, curr_season: int, leaderboard: list,
     msg = await ctx.guild.get_channel(config.launchpoint_leaderboard_id).fetch_message(msg_id)
 
     title = "Final Season " + str(curr_season) + " Leaderboard -- Positions " + "1 to 10"
-    current_leaderboard = parse_leaderboard(leaderboard, 0)
+    members = await ctx.guild.fetch_members(limit=1000)
+    member_ids = [user.id for user in members]
+    current_leaderboard = parse_leaderboard(leaderboard, 0, member_ids)
     players_str, games_str, rank_str = gen_embed_str(0, current_leaderboard)
 
     embed = discord.Embed(title=title, timestamp=datetime.datetime.utcnow())
-    # FIXME this is kinda sketchy but it works... maybe we should host the icon locally? something to think about
     embed.set_footer(text="\u200b", icon_url="https://cdn.discordapp.com/emojis/791152168429813800.png")
 
     # We want to print something, so if there's an error print that no one's reached the leader board yet.
@@ -53,7 +54,8 @@ def gen_embed_str(offset: int, current_leaderboard: list):
     return players_str, games_str, rank_str
 
 
-def parse_leaderboard(leaderboard, offset):  # this parses the leaderboard dict and removes non-eligible players
+def parse_leaderboard(leaderboard, offset, players):
+    # this parses the leaderboard dict and removes non-eligible players
     total_skipped = 0  # to keep track of how much more we need to go through when players don't qualify
     current_leaderboard = []
     for i in range(offset, offset + MAIN_LEADERBOARD_LIM + total_skipped):
@@ -67,7 +69,7 @@ def parse_leaderboard(leaderboard, offset):  # this parses the leaderboard dict 
         player_rank = round(player[2], 2)  # we wanna round the rank to 2 decimal places, a la profiles
 
         # Skip if the player hasn't played enough games or if the player isn't in the server anymore
-        if player_total_games < MATCH_THRESHOLD:  # or self.bot.get_user(player_id) is None: TODO remove comment
+        if player_total_games < MATCH_THRESHOLD or player_id not in players:
             total_skipped += 1
             continue
 
@@ -76,15 +78,14 @@ def parse_leaderboard(leaderboard, offset):  # this parses the leaderboard dict 
     return current_leaderboard
 
 
-def gen_leaderboard_embed(leaderboard: list, offset: int, season_num: int, overwrite_empty: bool):
+def gen_leaderboard_embed(leaderboard: list, offset: int, season_num: int, overwrite_empty: bool, members: list):
     position_str = str(offset + 1) + " to " + str(offset + MAIN_LEADERBOARD_LIM)  # Used for title
     title = "Season " + str(season_num) + " Leaderboard -- Positions " + position_str
 
     embed = discord.Embed(title=title, timestamp=datetime.datetime.utcnow())
-    # FIXME this is kinda sketchy but it works... maybe we should host the icon locally? something to think about
     embed.set_footer(text="\u200b", icon_url="https://cdn.discordapp.com/emojis/791152168429813800.png")
 
-    current_leaderboard = parse_leaderboard(leaderboard, offset)  # Get leaderboard based off offset
+    current_leaderboard = parse_leaderboard(leaderboard, offset, members)  # Get leaderboard based off offset
 
     players_str, games_str, rank_str = gen_embed_str(offset, current_leaderboard)
 

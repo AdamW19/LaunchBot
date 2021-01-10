@@ -14,14 +14,13 @@ class Staff(Cog):
         self.bot = bot
 
     async def cog_check(self, ctx):
-        # TODO make sure you edit this before launch, it disables staff/server675 checks
         # Checks to make sure we're not in a PM and we're not in another server
-        if not ctx.message.guild:  # or ctx.message.guild.id != config.launchpoint_server_id:
+        if not ctx.message.guild or ctx.message.guild.id != config.launchpoint_server_id:
             return False
 
         # Makes sure the person running this command is has the "Staff" role
-        # staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
-        return True  # staff_role in ctx.author.roles
+        staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
+        return staff_role in ctx.author.roles
 
     @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["change", "modify", "staff"])
     async def settings(self, ctx):

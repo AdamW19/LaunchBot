@@ -19,20 +19,20 @@ from db.src import db_strings
 
 SERVER_ID = 1234567890
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 2  # TODO change back to 8
+LOBBY_SIZE = 8
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
 REDO_MAP_MODE_THRESHOLD = int(LOBBY_SIZE / 2)
-BEST_OF = 3
+BEST_OF = 7
 BEST_OF_THRESHOLD = int(BEST_OF / 2) + 1
 
-LOBBY_START_TIMEOUT = 30 # (60 * 30)  # 30 minutes
-CAPTAIN_VERIF_TIMEOUT = 5 # 15  # 15 sec
-DRAFT_FORMAT_TIMEOUT = 15 # 60  # 60 sec or 1 min
-DRAFT_PLAYER_TIMEOUT = 15 # 20  # 20 sec
-MATCH_TIMEOUT = 10 # (60 * 3)  # 180 sec or 3 min
-SUB_TIMEOUT = 30 # (60 * 10)  # 10 min
+LOBBY_START_TIMEOUT = (60 * 30)  # 30 minutes
+CAPTAIN_VERIF_TIMEOUT = 15  # 15 sec
+DRAFT_FORMAT_TIMEOUT = 60  # 60 sec or 1 min
+DRAFT_PLAYER_TIMEOUT = 20  # 20 sec
+MATCH_TIMEOUT = (60 * 3)  # 180 sec or 3 min
+SUB_TIMEOUT = (60 * 10)  # 10 min
 SCORE_REPORT_TIMEOUT = (60 * 60 * 10)  # 10 hours
 
 
@@ -48,7 +48,7 @@ EMOTE_TO_INT = {
 
 REMAINING_STR = "Needs {} more player(s)"
 TIME_REMAINING = "{} more minutes before draft closes."
-GAME_STATUS = "Currently on game {}. You need to wait 180 seconds after the last change to report scores."  # TODO
+GAME_STATUS = "Currently on game {}. You need to wait 180 seconds after the last change to report scores."
 SCORE_STR = "{}-{}"
 
 
@@ -708,7 +708,9 @@ class Draft(Cog):
                         update_embed = True
 
                 except asyncio.TimeoutError:
-                    return  # TODO some error about not choosing a team on time, this shouldn't happen but
+                    # temp message that won't ever print out but just in case
+                    await message.edit(embed=None, content="Your draft expired. Did Berto take it?")
+                    return
 
             if update_embed:
                 map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode

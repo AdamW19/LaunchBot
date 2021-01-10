@@ -8,6 +8,8 @@ import config
 from db.src import db_strings
 from modules.leaderboard_helper import gen_leaderboard_embed, MAIN_LEADERBOARD_LIM, LEADERBOARD_SIZE
 
+LEADERBOARD_UPDATE_TIME = (60 * 60)  # 60 min, or 1 hour
+
 
 class Leaderboard(Cog):
     def __init__(self, bot):
@@ -27,8 +29,11 @@ class Leaderboard(Cog):
             db_curr_season = db_settings[4]
             db_leaderboard = db_settings[3]
 
+            members = await self.bot.get_guild(config.launchpoint_server_id).fetch_members(limit=1000).flatten()
+            member_ids = [user.id for user in members]
+
             leaderboard = self.db.execute_query_no_arg(db_strings.GET_LEADERBOARD)
-            embed = gen_leaderboard_embed(leaderboard, 0, db_curr_season, False)
+            embed = gen_leaderboard_embed(leaderboard, 0, db_curr_season, False, member_ids)
 
             # embed is none iff there's no one on the leaderboard
             if embed is not None:
@@ -46,7 +51,7 @@ class Leaderboard(Cog):
                         await self.global_lb_mes.edit(embed=embed)
                 else:  # if we have the message update the leaderboard
                     await self.global_lb_mes.edit(embed=embed)
-            await asyncio.sleep(20)  # TODO change this to a better value
+            await asyncio.sleep(LEADERBOARD_UPDATE_TIME)
 
     @commands.command(case_insensitive=True, aliases=["l", "rank", "ranks"])
     async def leaderboard(self, ctx):
@@ -61,9 +66,13 @@ class Leaderboard(Cog):
         else:
             overwrite_empty = True
 
+        members = await self.bot.get_guild(config.launchpoint_server_id).fetch_members(limit=1000).flatten()
+        member_ids = [user.id for user in members]
+
         # Makes embeds for pagination, we want 5 10-player sized embeds sorta like the global leaderboard
         for i in range(0, LEADERBOARD_SIZE, MAIN_LEADERBOARD_LIM):
-            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season, overwrite_empty))
+
+            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season, overwrite_empty, member_ids))
 
             if not overwrite_empty:
                 break

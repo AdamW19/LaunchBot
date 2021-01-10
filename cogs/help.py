@@ -62,6 +62,7 @@ class Help(commands.Cog):
         await ctx.send(embed=help_embed)
 
     @help.command(name="6", aliases=["Staff"])
+
     async def staff_commands(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "staff_commands")
