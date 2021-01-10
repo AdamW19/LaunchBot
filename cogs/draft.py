@@ -439,9 +439,9 @@ class Draft(Cog):
                         self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, player.id, 0, 1))
                 for player in bravo:
                     if player in captains:
-                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, player.id, 0, 0))
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, captB.id, 0, 0))
                     else:
-                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, captB.id, 0, 1))
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, player.id, 0, 1))
 
                 self.db.execute_commit_query(db_strings.INSERT_SCRIM, (ctx.message.id, alpha_team_id,
                                                                        bravo_team_id, 0, 0))
