@@ -19,7 +19,7 @@ from db.src import db_strings
 
 
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 4
+LOBBY_SIZE = 8
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
