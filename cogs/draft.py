@@ -3,7 +3,6 @@ import datetime
 from datetime import datetime
 import pytz
 import random
-import math
 
 import trueskill
 
@@ -12,9 +11,7 @@ from discord.ext import commands
 from discord.ext.commands import Cog
 from modules import code_parser, power_level
 from db.src import db_strings
-from img.stages.test import FILE_PREFIX
 
-# from discord import Guild
 
 # TODO this whole thing needs more testing and general refactoring
 
@@ -68,7 +65,8 @@ class Draft(Cog):
             season_start = datetime.fromtimestamp(settings_db[0][5], tz=pytz.utc)
             season_end = datetime.fromtimestamp(settings_db[0][6], tz=pytz.utc)
             # checks to make sure the season hasn't ended
-            if season_start > datetime.now(pytz.utc) or (season_end <= datetime.now(pytz.utc) or settings_db[0][7] == 0):
+            if season_start > datetime.now(pytz.utc) or (
+                    season_end <= datetime.now(pytz.utc) or settings_db[0][7] == 0):
                 await ctx.send(":x: The current season has ended or is on pause.")
                 return
 
@@ -431,10 +429,9 @@ class Draft(Cog):
 
                 # === Match start ===
                 await message.clear_reactions()
-                await self.match(ctx, alpha, bravo, captains, embed, message, [alpha_team_id, bravo_team_id], lobby_id)
+                await self.match(ctx, alpha, bravo, captains, message, [alpha_team_id, bravo_team_id], lobby_id)
 
-    async def match(self, ctx, alpha: list, bravo: list, captains: list, embed: discord.Embed, message, team_ids,
-                    lobby_id: int):
+    async def match(self, ctx, alpha: list, bravo: list, captains: list, message, team_ids, lobby_id: int):
         maplist_str = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)[0][1]
         mean_power_level = 0.0
         combined_team = alpha + bravo
@@ -499,19 +496,28 @@ class Draft(Cog):
                         embed.clear_fields()
                         await message.clear_reactions()
 
+                        if player in captains:
+                            captains.remove(player)
+
+                            self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, ))
+
                         # remove old player
                         if player in alpha:
+                            if player in captains:  # remove captain status in the db
+                                captains.remove(player)
+                                self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, team_ids[0], player.id))
                             alpha.remove(player)
                             alpha_subs.append(player)
                             self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[0], player.id))
-                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1))
+                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1, 0))
                         elif player in bravo:
+                            if player in captains:
+                                captains.remove(player)
+                                self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, team_ids[1], player.id))
                             bravo.remove(player)
                             bravo_subs.append(player)
-                            self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[0], player.id))
-                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1))
-                        elif player in captains:
-                            captains.remove(player)
+                            self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[1], player.id))
+                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[1], sub.id, 1, 0))
 
                         if len(captains) != NUM_CAPTAINS:  # choose a random player to be captain if the captain left
                             if len(alpha) != LOBBY_SIZE / 2.0:
@@ -779,7 +785,6 @@ class Draft(Cog):
 
         return embed
 
-
     @staticmethod
     def gen_player_str(players: list):
         player_str = ""
@@ -788,7 +793,7 @@ class Draft(Cog):
         return player_str
 
     @staticmethod
-    def gen_players_remaining_str(players_remaining: list):
+    def gen_players_remaining_str(players_remaining: dict):
         player_str = ""
         if len(players_remaining) == 0:
             return "None"
