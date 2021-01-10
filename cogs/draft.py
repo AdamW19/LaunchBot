@@ -77,8 +77,7 @@ class Draft(Cog):
             season_start = datetime.fromtimestamp(settings_db[0][5], tz=pytz.utc)
             season_end = datetime.fromtimestamp(settings_db[0][6], tz=pytz.utc)
             # checks to make sure the season hasn't ended
-            if season_start > datetime.now(pytz.utc) or season_end <= datetime.now(pytz.utc) \
-                or settings_db[0][7] != 0:
+            if not season_start <= datetime.now(pytz.utc) < season_end:
                 await ctx.send(":x: The current season has ended or is on pause.")
                 return
 

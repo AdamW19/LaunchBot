@@ -50,7 +50,7 @@ class SplatoonDB(Database):
         self.execute_query_no_arg(db_strings.DROP_SCRIM_TABLE)
 
         # Updating seasons table
-        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, 0, current_time, 0, server_id))
+        self.execute_commit_query(db_strings.UPDATE_SEASON, (new_season_num, -1, current_time, 0, server_id))
 
         # Inits any dropped tables
         self.init_season()

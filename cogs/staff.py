@@ -17,7 +17,6 @@ class Staff(Cog):
         # Checks to make sure we're not in a PM and we're not in another server
         if not ctx.message.guild or ctx.message.guild.id != config.launchpoint_server_id:
             return False
-
         # Makes sure the person running this command is has the "Staff" role
         staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
         return staff_role in ctx.author.roles
@@ -156,6 +155,7 @@ class Staff(Cog):
         settings_db = self.bot.db.execute_query(db_strings.GET_SETTINGS, guild_id)
         if len(settings_db) == 0:
             self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, current_time, 0))
+
 
 def setup(bot):
     bot.add_cog(Staff(bot))
