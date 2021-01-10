@@ -64,6 +64,10 @@ def parse_leaderboard(leaderboard, offset, players):
             break
 
         player = leaderboard[i]
+
+        if player is None or player[2] is None:
+            total_skipped += 1
+            continue
         player_id = player[0]
         player_total_games = player[1]
         player_rank = round(player[2], 2)  # we wanna round the rank to 2 decimal places, a la profiles
