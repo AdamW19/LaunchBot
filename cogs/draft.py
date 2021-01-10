@@ -3,28 +3,39 @@ import datetime
 from datetime import datetime
 import pytz
 import random
-import math
 
 import trueskill
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
+
+import config
 from modules import code_parser, power_level
 from db.src import db_strings
-from img.stages.test import FILE_PREFIX
 
-# from discord import Guild
 
-# TODO this whole thing needs more testing and general refactoring
+# TODO this whole thing needs more testing and a metric boatload of refactoring
 
+SERVER_ID = 1234567890
 LAUNCHPOINT_ROLE = 795214612576469022
-LOBBY_SIZE = 4
+LOBBY_SIZE = 8
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
-REDO_MAP_MODE_THRESHOLD = 4
+REDO_MAP_MODE_THRESHOLD = int(LOBBY_SIZE / 2)
 BEST_OF = 7
+BEST_OF_THRESHOLD = int(BEST_OF / 2) + 1
+
+LOBBY_START_TIMEOUT = (60 * 30)  # 30 minutes
+CAPTAIN_VERIF_TIMEOUT = 15  # 15 sec
+DRAFT_FORMAT_TIMEOUT = 60  # 60 sec or 1 min
+DRAFT_PLAYER_TIMEOUT = 20  # 20 sec
+MATCH_TIMEOUT = (60 * 3)  # 180 sec or 3 min
+SUB_TIMEOUT = (60 * 10)  # 10 min
+SCORE_REPORT_TIMEOUT = (60 * 60 * 10)  # 10 hours
+
+
 
 EMOTE_TO_INT = {
     "1️⃣": 1,
@@ -37,7 +48,7 @@ EMOTE_TO_INT = {
 
 REMAINING_STR = "Needs {} more player(s)"
 TIME_REMAINING = "{} more minutes before draft closes."
-GAME_STATUS = "Currently on game {}."
+GAME_STATUS = "Currently on game {}. You need to wait 180 seconds after the last change to report scores."
 SCORE_STR = "{}-{}"
 
 
@@ -50,6 +61,27 @@ class Draft(Cog):
     @commands.command(case_insensitive=True)
     @commands.has_role("LaunchPoint")
     async def draft(self, ctx):
+
+        # Checks to make sure the server has an entry in the settings table and that the maplist is valid
+        settings_db = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
+        if len(settings_db) == 0:
+            await ctx.send(":x: No maplist found. Please ask the developers or the staff for help.")
+            return
+        else:
+            maplist = settings_db[0][1]
+            parsed_maplist = code_parser.parse_code_dict(maplist)
+            if "error" in parsed_maplist:
+                await ctx.send(":x: Invalid maplist found. Please ask the developers or the staff for help.")
+                return
+
+            season_start = datetime.fromtimestamp(settings_db[0][5], tz=pytz.utc)
+            season_end = datetime.fromtimestamp(settings_db[0][6], tz=pytz.utc)
+            # checks to make sure the season hasn't ended
+            if season_start > datetime.now(pytz.utc) and (
+                    season_end <= datetime.now(pytz.utc) or settings_db[0][7] == 0):
+                await ctx.send(":x: The current season has ended or is on pause.")
+                return
+
         # Ping LaunchPoint members
         # msg = '{}'.format(LaunchPoint.mention)
         # await ctx.send('<@&795214612576469022>')
@@ -57,6 +89,7 @@ class Draft(Cog):
         captains = []
         players = []
         lobby_curation_time = datetime.now(pytz.utc)
+        lobby_id = ctx.message.id
 
         # Embed for players to join draft
         embed = discord.Embed(title="Draft")
@@ -88,7 +121,7 @@ class Draft(Cog):
 
                 current_time = datetime.now(pytz.utc)
                 delta = current_time - lobby_curation_time
-                sec_left = (60 * 30) - delta.seconds
+                sec_left = LOBBY_START_TIMEOUT - delta.seconds
 
                 if delta.days < 0:
                     sec_left = 0
@@ -102,7 +135,8 @@ class Draft(Cog):
 
                 # role = discord.utils.find(lambda r: r.name == 'Member', ctx.message.server.roles)
                 if str(reaction) == launchEmoji:
-                    if user not in captains and (len(captains) is 0 or len(players) + len(captains) + 1 == LOBBY_SIZE):
+                    if user not in captains and user not in players and \
+                            (len(captains) is 0 or len(players) + len(captains) + 1 == LOBBY_SIZE):
                         captains.append(user)
                     elif user not in players and user not in captains:
                         players.append(user)
@@ -164,7 +198,8 @@ class Draft(Cog):
                         return user_c in captains and user_c.id is not ctx.me.id
                     return False
 
-                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=5.0, check=captain_check)
+                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=CAPTAIN_VERIF_TIMEOUT,
+                                                                 check=captain_check)
                 embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
                 embed.set_field_at(index=1, name="Captain?", value="Would anyone like to be the captain? React with "
                                                                    "`🖐` to be the captain within the next 15 "
@@ -179,7 +214,8 @@ class Draft(Cog):
                         return user_p in players and user_p not in captains and user_p.id is not ctx.me.id \
                                and str(reaction_p) == "🖐"
 
-                    reaction, new_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=player_check)
+                    reaction, new_captain = await self.bot.wait_for('reaction_add', timeout=CAPTAIN_VERIF_TIMEOUT,
+                                                                    check=player_check)
 
                     # remove old captain and add them as a player, vice verse for new captain
                     captains.remove(orig_captain)
@@ -282,10 +318,11 @@ class Draft(Cog):
                 curr_captA = True
                 for i in range(len(players)):
                     try:
-                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=lambda x, y: curr_captain_check(x, y, curr_captA))
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=DRAFT_PLAYER_TIMEOUT,
+                                          check=lambda x, y: curr_captain_check(x, y, curr_captA))
 
                     except asyncio.TimeoutError:
-                        num = random.randint(0, len(players_remaining))
+                        num = random.randint(0, len(players_remaining) - 1)
                         keys = players_remaining.keys()
                         reaction = keys[num]
 
@@ -302,7 +339,7 @@ class Draft(Cog):
                     embed.set_field_at(inline=False, index=2, name="Remaining Players",
                                             value=self.gen_players_remaining_str(players_remaining))
                     embed.set_field_at(inline=False, index=3, name="Current Pick",
-                                           value=captA if curr_captA else captB)
+                                           value=captA.mention if curr_captA else captB.mention)
 
                     await message.edit(embed=embed)
                     await reaction.clear()
@@ -312,28 +349,33 @@ class Draft(Cog):
                 curr_captA = True
                 for i in range(len(players)):
                     try:
-                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0,
-                                                                 check=captain_a_check)
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=DRAFT_PLAYER_TIMEOUT,
+                                                                 check=lambda x, y: curr_captain_check(x, y,
+                                                                                                       curr_captA))
 
                     except asyncio.TimeoutError:
-                        num = random.randint(0, len(players_remaining))
-                        reaction = players_remaining[num]
+                        num = random.randint(0, len(players_remaining) - 1)
+                        keys = players_remaining.keys()
+                        reaction = keys[num]
 
+                    choosen_player = players_remaining.pop(str(reaction))
+                    if curr_captA:
+                        alpha.append(choosen_player)
+                        embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
                     else:
-                        choosen_player = players_remaining.pop(EMOTE_TO_INT[str(reaction)])
-                        if curr_captA:
-                            alpha.append(choosen_player)
-                            embed.set_field_at(index=0, name="Alpha Team", value=self.gen_player_str(alpha))
-                        else:
-                            bravo.append(choosen_player)
-                            embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
+                        bravo.append(choosen_player)
+                        embed.set_field_at(index=1, name="Bravo Team", value=self.gen_player_str(bravo))
 
-                        if i == 0 or i == 2 or i == 4:
-                            curr_captA = not curr_captA
-                        embed.set_field_at(inline=False, index=2, name="Remaining Players",
-                                           value=self.gen_players_remaining_str(players_remaining))
-                        await message.edit(embed=embed)
-                        await reaction.clear()
+                    if i == 0 or i == 2 or i == 4:
+                        curr_captA = not curr_captA
+
+                    embed.set_field_at(inline=False, index=2, name="Remaining Players",
+                                       value=self.gen_players_remaining_str(players_remaining))
+                    embed.set_field_at(inline=False, index=3, name="Current Pick",
+                                       value=captA if curr_captA else captB)
+
+                    await message.edit(embed=embed)
+                    await reaction.clear()
 
             # Ask captains to agree on draft format
             try:
@@ -345,12 +387,12 @@ class Draft(Cog):
                 # Time remaining calculations
                 current_time = datetime.now(pytz.utc)
                 delta = current_time - draft_mode_curation
-                sec_left = 15.0 - delta.seconds
+                sec_left = DRAFT_FORMAT_TIMEOUT - delta.seconds
 
                 reaction1, captA = await self.bot.wait_for('reaction_add', timeout=sec_left, check=captain_check)
                 reaction2, captB = await self.bot.wait_for('reaction_add', timeout=sec_left, check=captain_check)
 
-                if str(reaction1) == str(reaction2):
+                if str(reaction1) == str(reaction2) and captA != captB:
                     if str(reaction1) == "1️⃣":
                         await alternate_draft(captA, captB)
                     elif str(reaction1) == "2️⃣":
@@ -363,6 +405,7 @@ class Draft(Cog):
                     elif str(reaction2) == "1️⃣" and str(reaction1) == "2️⃣":
                         await reaction1.remove(captB)
                         await reaction2.remove(captA)
+                    continue
 
             except asyncio.TimeoutError:
                 random_mode = random.randint(1, 3)
@@ -379,32 +422,44 @@ class Draft(Cog):
                     await snake_draft(captA, captB)
                 reactions_not_match = False
 
-        db_settings = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)[0]
+            else:
+                db_settings = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)[0]
 
-        alpha_team_id = int(db_settings[2])
-        bravo_team_id = alpha_team_id + 1
+                alpha_team_id = int(db_settings[2])
+                bravo_team_id = alpha_team_id + 1
 
-        self.db.execute_commit_query(db_strings.UPDATE_LAST_SCRIM, (bravo_team_id + 1))
+                self.db.execute_commit_query(db_strings.UPDATE_LAST_SCRIM, ((bravo_team_id + 1), ctx.guild.id))
 
-        for player in alpha:
-            self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, player.id, 0))
-        for player in bravo:
-            self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, player.id, 0))
+                for player in alpha:
+                    if player in captains:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, captA.id, 0, 0))
+                    else:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, player.id, 0, 1))
+                for player in bravo:
+                    if player in captains:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, player.id, 0, 0))
+                    else:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, captB.id, 0, 1))
 
-        self.db.execute_commit_query(db_strings.INSERT_SCRIM, (ctx.message.id, alpha_team_id, bravo_team_id, 0, 0))
+                self.db.execute_commit_query(db_strings.INSERT_SCRIM, (ctx.message.id, alpha_team_id,
+                                                                       bravo_team_id, 0, 0))
+                # === Match start ===
+                await message.clear_reactions()
+                await self.match(ctx, alpha, bravo, captains, message, [alpha_team_id, bravo_team_id], lobby_id)
 
-        # === Match start ===
-        await message.clear_reactions()
-        await self.match(ctx, alpha, bravo, captains, embed, message, [alpha_team_id, bravo_team_id])
-
-    async def match(self, ctx, alpha: list, bravo: list, captains: list, embed: discord.Embed, message, team_ids):
+    async def match(self, ctx, alpha: list, bravo: list, captains: list, message, team_ids, lobby_id: int):
         maplist_str = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)[0][1]
         mean_power_level = 0.0
-        for seq in (alpha, bravo):
-            for player in seq:
-                player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0][1]
-                mean_power_level += player_power
-        mean_power_level = mean_power_level / 8.0
+        combined_team = alpha + bravo
+        for player in combined_team:
+            player_db = self.db.execute_query(db_strings.GET_PLAYER, player.id)
+            if len(player_db) == 0:
+                self.db.execute_commit_query(db_strings.INSERT_PLAYER, (player.id, None, None, 0, 0, 0, 0))
+                player_power = 25.0  # default starting power level
+            else:
+                player_power = float(player_db[0][1])
+            mean_power_level += player_power
+        mean_power_level = round(mean_power_level / 8.0, 0)
 
         num_players_redo = 0
         total_num_games_played = 0
@@ -417,103 +472,102 @@ class Draft(Cog):
         bravo_subs = []
 
         map_list = code_parser.parse_code_format(maplist_str)
+        map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode
 
-        embed.clear_fields()
-        embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha))
-        embed.add_field(name="Beta Team", value=self.gen_player_str(bravo))
-        map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
-        map_mode_list = map_mode.split("-")
+        embed = self.gen_match_embed(alpha, bravo, map_mode, mean_power_level, alpha_wins, bravo_wins,
+                                     GAME_STATUS.format(total_num_games_played + 1), lobby_id)
 
-        embed.add_field(name="Mode + Stage", value=map_mode, inline=False)
-        embed.add_field(name="Average Power Level", value=str(mean_power_level), inline=False)
-        embed.add_field(name="Status", value=GAME_STATUS.format(str(total_num_games_played)), inline=False)
-        embed.add_field(name="Score", value=SCORE_STR.format(alpha_wins, bravo_wins), inline=False)
+        await message.edit(embed=embed)
 
-        map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
-        file = discord.File(map_file, filename="map.png")
-        embed.set_image(url="attachment://map.png")
+        await message.add_reaction('⛔')  # stop sign
+        await message.add_reaction('\N{ANTICLOCKWISE DOWNWARDS AND UPWARDS OPEN CIRCLE ARROWS}')  # redo icon
 
-        await message.edit(file=file, embed=embed)
-
-        await message.add_reaction("⛔️")
-        await message.add_reaction("🔄")
-
-        while alpha_wins < math.ceil(BEST_OF / 2.0) or bravo_wins < math.ceil(BEST_OF / 2.0):
+        while alpha_wins != BEST_OF_THRESHOLD and bravo_wins != BEST_OF_THRESHOLD:
+            update_embed = False
             try:
                 def set_check(reaction_s, user_s):  # has to be a player/captain and not the bot
                     return (user_s in alpha or user_s in bravo or user_s in captains) and user_s.id is not ctx.me.id
 
-                reaction, player = await self.bot.wait_for('reaction_add', timeout=(60*3), check=set_check)
+                reaction, player = await self.bot.wait_for('reaction_add', timeout=MATCH_TIMEOUT, check=set_check)
 
                 if str(reaction) == "⛔":
-                    await embed.clear_fields()
                     await message.clear_reactions()
-                    embed.add_field(name="Status", value="Need a sub, feel free to ping again.. If you want to sub, "
-                                                         "react with `🖐`.\n"
+                    embed.set_field_at(index=4, name="Status", value="We need a sub! "
+                                                                     "If you want to sub, react with `🖐`.\n"
                                                          "Lobby will auto-close in 10 minutes if a sub could not "
                                                          "be found.")
                     await message.add_reaction("🖐")
-                    await message.edit(file=None, embed=embed)
+                    await message.edit(embed=embed)
 
                     try:
+                        total_map_refreshes = 0
                         def sub_check(reaction_sub, user_sub):  # has to be a player not in the lobby, not the bot,
                                                                 # and reacted
-                            return (user_sub not in alpha or user_sub not in bravo or user_sub not in captains) and \
+                            return user_sub not in alpha and user_sub not in bravo and \
                                    user_sub.id is not ctx.me.id and str(reaction_sub) == "🖐"
 
                         # wait for a sub to react
-                        reaction, sub = await self.bot.wait_for('reaction_add', timeout=(60.0 * 10), check=sub_check)
+                        reaction, sub = await self.bot.wait_for('reaction_add', timeout=SUB_TIMEOUT, check=sub_check)
 
                         # clear fields and reactions
-                        await embed.clear_fields()
+                        embed.clear_fields()
                         await message.clear_reactions()
 
                         # remove old player
                         if player in alpha:
+                            if player in captains:  # remove captain status in the db
+                                captains.remove(player)
+                                self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, team_ids[0], player.id))
                             alpha.remove(player)
                             alpha_subs.append(player)
+                            alpha.append(sub)
+                            alpha_subs.append(sub)
                             self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[0], player.id))
-                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1))
+                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1, 0))
+
+                            if len(captains) != NUM_CAPTAINS:
+                                if len(alpha) > 1:
+                                    captains.append(alpha[random.randint(0, len(alpha) - 1)])
+                                else:
+                                    captains.append(sub)
                         elif player in bravo:
+                            if player in captains:
+                                captains.remove(player)
+                                self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, team_ids[1], player.id))
                             bravo.remove(player)
                             bravo_subs.append(player)
-                            self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[0], player.id))
-                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1))
-                        elif player in captains:
-                            captains.remove(player)
-
-                        if len(captains) != NUM_CAPTAINS:  # choose a random player to be captain if the captain left
-                            if len(alpha) != LOBBY_SIZE / 2.0:
-                                captains.append(alpha[random.randint(0, len(alpha))])
-                            else:
-                                captains.append(bravo[random.randint(0, len(bravo))])
-
-                        if len(alpha) != LOBBY_SIZE / 2.0:  # regardless just append the new player
-                            alpha.append(sub)
-                        else:
                             bravo.append(sub)
+                            bravo_subs.append(sub)
+                            self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[1], player.id))
+                            self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[1], sub.id, 1, 0))
+
+                            if len(captains) != NUM_CAPTAINS:
+                                if len(bravo) > 1:
+                                    captains.append(bravo[random.randint(0, len(bravo) - 1)])
+                                else:
+                                    captains.append(sub)
 
                         mean_power_level = 0.0
-                        for seq in (alpha, bravo):  # re-calculate mean power level
-                            for player in seq:
-                                player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)
-                                mean_power_level += player_power
-                        mean_power_level = mean_power_level / 8.0
+                        for player in combined_team:
+                            player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0][1]
+                            mean_power_level += player_power
+                        mean_power_level = round(mean_power_level / 8.0, 0)
 
-                        embed.set_field_at(index=4, name="Status", value="Thank you for subbing {}! If the captain "
-                                                                         "left, I randomly choose someone in the team "
-                                                                         "to be the captain.\n"
-                                                                         "Returning to the set...".format(sub.mention)
-                                           , inline=False)
+                        embed.add_field(name="Status", value="Thank you for subbing {}! If the captain left, "
+                                                             "I randomly choose someone in the team to be the "
+                                                             "captain.\n"
+                                                             "Returning to the set...".format(sub.mention),
+                                           inline=False)
                         await message.clear_reactions()
                         await message.edit(embed=embed)
 
                         with ctx.channel.typing():
                             await asyncio.sleep(5)
 
-                        continue
+                        update_embed = True
+
                     except asyncio.TimeoutError:
-                        await embed.clear_fields()
+                        embed.clear_fields()
                         await message.edit(content="Could not find a sub in time. Closing lobby.", embed=None)
 
                         if total_num_games_played > 0:
@@ -525,7 +579,7 @@ class Draft(Cog):
 
                 elif str(reaction) == "🔄" and total_map_refreshes < 2:
                     num_players_redo += 1
-                    status_str = GAME_STATUS.format(total_num_games_played) + " We need {} more people to reroll the " \
+                    status_str = GAME_STATUS.format(total_num_games_played + 1) + " We need {} more people to reroll the " \
                                                                               "stage-mode.".format(str(
                                                                             REDO_MAP_MODE_THRESHOLD - num_players_redo))
                     embed.set_field_at(index=4, name="Status", value=status_str, inline=False)
@@ -533,18 +587,33 @@ class Draft(Cog):
                     if REDO_MAP_MODE_THRESHOLD - num_players_redo == 0:  # if we met the threshold do a reset
                         num_players_redo = 0
                         total_map_refreshes += 1
-                        map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
-                        map_mode_list = map_mode.split("-")
-                        map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
+                        status_str = GAME_STATUS.format(total_num_games_played + 1) + \
+                                     " Rerolled map-mode. You have {} more rerolls.".format(2 - total_map_refreshes)
+
+                        await message.clear_reactions()
+                        await message.add_reaction('⛔')  # stop sign
+                        await message.add_reaction('\N{ANTICLOCKWISE DOWNWARDS AND UPWARDS OPEN CIRCLE ARROWS}')
+
+                        map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode
+                        # map_mode_list = map_mode.split("-")
+                        # map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
                         embed.set_field_at(index=2, name="Mode + Stage", value=map_mode, inline=False)
+                        embed.set_field_at(index=4, name="Status", value=status_str, inline=False)
 
-                        file = discord.File(map_file, filename="map.png")
-                        embed.set_image(url="attachment://map.png")
+                        # file = discord.File(map_file, filename="map.png")
+                        # embed.set_image(url="attachment://map.png")
 
-                        await message.edit(file=file, embed=embed)
+                        await message.edit(embed=embed)
                         continue
             except asyncio.TimeoutError:
-                await embed.clear_fields()
+                embed = discord.Embed(title="Draft")
+                embed.set_footer(text="Scrim ID: " + str(ctx.message.id))
+
+                embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha))
+                embed.add_field(name="Beta Team", value=self.gen_player_str(bravo))
+
+                embed.add_field(name="Mode + Stage", value=map_mode, inline=False)
+
                 await message.clear_reactions()
 
                 num_captains_agree = [0, 0]  # index 0 is alpha, index 1 is bravo
@@ -552,7 +621,7 @@ class Draft(Cog):
 
                 embed.add_field(name="Winner?", value="Who won the {} game?".format(map_mode) +
                                                       "\n\n `🇦` for Alpha team, `🇧` for Beta team.")
-                embed.add_field(name="Status", value="Both captains must agree, or a majority of the team must agree.")
+                embed.add_field(name="Status", value="Both captains must agree, or a majority of the lobby must agree.")
 
                 await message.edit(file=None, embed=embed)
 
@@ -564,24 +633,25 @@ class Draft(Cog):
                         return (user_match in alpha or user_match in bravo or user_match in captains) and \
                                user_match.id is not ctx.me.id
 
-                    reaction, lobby_player = await self.bot.wait_for('reaction_add', timeout=(60.0 * 60 * 10),
-                                                                     check=match_check)
+                    while num_players_agree[0] < LOBBY_THRESHOLD and num_players_agree[1] < LOBBY_THRESHOLD and \
+                        num_captains_agree[0] < len(captains) and num_captains_agree[1] < len(captains):
 
-                    if str(reaction) == "🇦":
-                        if lobby_player in alpha or lobby_player in bravo:
+                        reaction, lobby_player = await self.bot.wait_for('reaction_add', timeout=SCORE_REPORT_TIMEOUT,
+                                                                         check=match_check)
+
+                        if str(reaction) == "🇦":
+                            if lobby_player in captains:
+                                num_captains_agree[0] += 1
                             num_players_agree[0] += 1
-                        elif lobby_player in captains:
-                            num_captains_agree[0] += 1
-                    elif str(reaction) == "🇧":
-                        if lobby_player in alpha or lobby_player in bravo:
+                        elif str(reaction) == "🇧":
+                            if lobby_player in captains:
+                                num_captains_agree[1] += 1
                             num_players_agree[1] += 1
-                        elif lobby_player in captains:
-                            num_captains_agree[1] += 1
 
-                    if num_captains_agree[0] == captains or num_players_agree[0] >= LOBBY_THRESHOLD:
+                    if num_captains_agree[0] == len(captains) or num_players_agree[0] >= LOBBY_THRESHOLD:
                         alpha_wins += 1
                         result = power_level.Result.ALPHA_WIN
-                    elif num_captains_agree[1] == captains or num_players_agree[1] >= LOBBY_THRESHOLD:
+                    elif num_captains_agree[1] == len(captains) or num_players_agree[1] >= LOBBY_THRESHOLD:
                         bravo_wins += 1
                         result = power_level.Result.BETA_WIN
                     else:
@@ -589,40 +659,39 @@ class Draft(Cog):
 
                     self.db.execute_commit_query(db_strings.UPDATE_SCRIM_SCORE, (alpha_wins, bravo_wins,
                                                                                  ctx.message.id))
-
+                    total_num_games_played += 1
                     # arrays of player objects for new power ratings
                     alpha_team_pow = []
                     bravo_team_pow = []
 
-                    for seq in (alpha, bravo):
-                        for player in seq:
-                            # generates Player object for power calculations
-                            player_db = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0]
-                            pow_player = power_level.Player(self.trueskill_env, player.id, player_db[1], player_db[2])
+                    for player in combined_team:
+                        # generates Player object for power calculations
+                        player_db = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0]
+                        pow_player = power_level.Player(self.trueskill_env, player.id, player_db[1], player_db[2])
 
-                            # Saves result of the game into the db
-                            game_wins = player_db[3]
-                            game_losses = player_db[4]
+                        # Saves result of the game into the db
+                        game_wins = player_db[3]
+                        game_losses = player_db[4]
 
-                            if player in alpha:
+                        if player in alpha:
 
-                                alpha_team_pow.append(pow_player)
-                                if result is power_level.Result.ALPHA_WIN:
-                                    game_wins += 1
-                                else:
-                                    game_losses += 1
-                                self.db.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
-                                                             (game_wins, game_losses, player.id))
-
+                            alpha_team_pow.append(pow_player)
+                            if result is power_level.Result.ALPHA_WIN:
+                                game_wins += 1
                             else:
-                                bravo_team_pow.append(pow_player)
+                                game_losses += 1
+                            self.db.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
+                                                         (game_wins, game_losses, player.id))
 
-                                if result is power_level.Result.BETA_WIN:
-                                    game_wins += 1
-                                else:
-                                    game_losses += 1
-                                self.db.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
-                                                             (game_wins, game_losses, player.id))
+                        else:
+                            bravo_team_pow.append(pow_player)
+
+                            if result is power_level.Result.BETA_WIN:
+                                game_wins += 1
+                            else:
+                                game_losses += 1
+                            self.db.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
+                                                         (game_wins, game_losses, player.id))
 
                     alpha_team = power_level.Team(alpha_team_pow, None)
                     bravo_team = power_level.Team(bravo_team_pow, None)
@@ -630,87 +699,109 @@ class Draft(Cog):
                     power_level.calc_new_rating(self.trueskill_env, alpha_team, bravo_team, result)
 
                     # saves new power level for each player
-                    for seq in (alpha_team_pow, bravo_team_pow):
-                        for player in seq:
-                            player_id = player.player_id
-                            self.db.execute_commit_query(db_strings.UPDATE_PLAYER_RANK,
-                                                         (player.rating.mu, player.rating.sigma, player_id))
+                    for player in (alpha_team_pow + bravo_team_pow):
+                        player_id = player.player_id
+                        self.db.execute_commit_query(db_strings.UPDATE_PLAYER_RANK,
+                                                     (player.rating.mu, player.rating.sigma, player_id))
+
+                    if alpha_wins != BEST_OF_THRESHOLD and bravo_wins != BEST_OF_THRESHOLD:
+                        update_embed = True
 
                 except asyncio.TimeoutError:
-                    return  # TODO some error about not choosing a team on time, this shouldn't happen but
+                    # temp message that won't ever print out but just in case
+                    await message.edit(embed=None, content="Your draft expired. Did Berto take it?")
+                    return
 
-            embed.clear_fields()
-            embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha))
-            embed.add_field(name="Beta Team", value=self.gen_player_str(bravo))
-            map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
-            map_mode_list = map_mode.split("-")
+            if update_embed:
+                map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode
+                embed = self.gen_match_embed(alpha, bravo, map_mode, mean_power_level, alpha_wins, bravo_wins,
+                                             GAME_STATUS.format(total_num_games_played + 1), lobby_id)
+                await message.clear_reactions()
+                await message.add_reaction('⛔')  # stop sign
+                await message.add_reaction('\N{ANTICLOCKWISE DOWNWARDS AND UPWARDS OPEN CIRCLE ARROWS}')
 
-            map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
-            embed.add_field(name="Mode + Stage", value=map_mode, inline=False)
-            embed.add_field(name="Average Power Level", value=str(mean_power_level), inline=False)
-            embed.add_field(name="Status", value=GAME_STATUS.format(str(total_num_games_played)))
-            embed.add_field(name="Score", value=SCORE_STR.format(alpha_wins, bravo_wins))
+            await message.edit(embed=embed)
 
-            file = discord.File(map_file, filename="map.png")
-            embed.set_image(url="attachment://map.png")
-
-            await message.edit(file=file, embed=embed)
-
-            await message.add_reaction("⛔️")
-            await message.add_reaction("🔄")
-
-        if alpha_wins < math.ceil(BEST_OF / 2.0):
+        if alpha_wins == BEST_OF_THRESHOLD:
             set_endresult = power_level.Result.ALPHA_WIN
         else:
             set_endresult = power_level.Result.BETA_WIN
 
-        for seq in (alpha, bravo):
-            for player in seq:
-                player_db = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0]
+        for player in combined_team:
+            player_db = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0]
 
-                set_wins = player_db[5]
-                set_losses = player_db[6]
-                if player in alpha:
-                    team_player_db = self.db.execute_query(db_strings.GET_TEAM_PLAYER, team_ids[0], player.id)[0]
-                    if team_player_db[2] is False:
-                        if set_endresult is power_level.Result.ALPHA_WIN:
-                            set_wins += 1
-                        else:
-                            set_losses += 1
-                        self.db.execute_commit_query(db_strings.UPDATE_PLAYER_SET_STAT,
-                                                     (set_wins, set_losses, player.id))
-                else:
-                    team_player_db = self.db.execute_query(db_strings.GET_TEAM_PLAYER, team_ids[1], player.id)[0]
-                    if team_player_db[2] is False:
-                        if set_endresult is power_level.Result.BETA_WIN:
-                            set_wins += 1
-                        else:
-                            set_losses += 1
-                        self.db.execute_commit_query(db_strings.UPDATE_PLAYER_GAME_STAT,
-                                                     (set_wins, set_losses, player.id))
+            set_wins = player_db[5]
+            set_losses = player_db[6]
+            if player in alpha:
+                team_player_db = self.db.execute_query(db_strings.GET_TEAM_PLAYER, (team_ids[0], player.id))[0]
+                if not bool(team_player_db[2]):
+                    if set_endresult is power_level.Result.ALPHA_WIN:
+                        set_wins += 1
+                    else:
+                        set_losses += 1
+                    self.db.execute_commit_query(db_strings.UPDATE_PLAYER_SET_STAT,
+                                                 (set_wins, set_losses, player.id))
+            else:
+                team_player_db = self.db.execute_query(db_strings.GET_TEAM_PLAYER, (team_ids[1], player.id))[0]
+                if not bool(team_player_db[2]):
+                    if set_endresult is power_level.Result.BETA_WIN:
+                        set_wins += 1
+                    else:
+                        set_losses += 1
+                    self.db.execute_commit_query(db_strings.UPDATE_PLAYER_SET_STAT,
+                                                 (set_wins, set_losses, player.id))
 
         await message.clear_reactions()
         final_embed = self.send_final_score(alpha, bravo, alpha_subs, bravo_subs, [alpha_wins, bravo_wins],
                                             set_endresult, ctx.message.id)
+
+        await self.bot.get_channel(config.launchpoint_score_id).send(embed=final_embed)
         await message.edit(embed=final_embed)
 
     def send_final_score(self, alpha: list, bravo: list, alpha_subs: list, bravo_subs: list, result: list,
                          winner: power_level.Result, scrim_id: int):
+        alpha_str = self.gen_player_str(alpha)
+        if len(alpha_subs) == 0:
+            alpha_str += "\n *No Subs*"
+        else:
+            alpha_str += "\nSubs:\n"
+            alpha_str += self.gen_player_str(alpha_subs)
+
+        bravo_str = self.gen_player_str(bravo)
+        if len(bravo_subs) == 0:
+            bravo_str += "\n *No Subs*"
+        else:
+            bravo_str += "\nSubs:\n"
+            bravo_str += self.gen_player_str(bravo_subs)
+
         embed = discord.Embed(title="Draft result")
-        embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha) + "\nSubs:\n" +
-                                                 self.gen_player_str(alpha_subs))
-        embed.add_field(name="Bravo Team", value=self.gen_player_str(bravo) + "\nSubs:\n" +
-                                                 self.gen_player_str(bravo_subs))
+        embed.add_field(name="Alpha Team", value=alpha_str)
+        embed.add_field(name="Bravo Team", value=bravo_str)
 
         if winner is power_level.Result.ALPHA_WIN:
             winner_str = "Alpha team won!"
-        elif winner is power_level.Result.ALPHA_WIN:
+        elif winner is power_level.Result.BETA_WIN:
             winner_str = "Beta team won!"
         else:
             winner_str = "Did not finish."
 
-        embed.add_field(name="Result", value=SCORE_STR.format(result[0], result[1]) + "\n" + winner_str)
+        embed.add_field(name="Result", value=SCORE_STR.format(result[0], result[1]) + "\n" + winner_str, inline=False)
         embed.set_footer(text="Scrim ID: " + str(scrim_id))
+
+        return embed
+
+    def gen_match_embed(self, alpha: list, bravo: list, map_mode: str, mean_power_level: float, alpha_wins: int,
+                        bravo_wins: int, status_str: str, lobby_id: int):
+        embed = discord.Embed(title="Draft")
+        embed.add_field(name="Alpha Team", value=self.gen_player_str(alpha))
+        embed.add_field(name="Beta Team", value=self.gen_player_str(bravo))
+
+        embed.add_field(name="Mode + Stage", value=map_mode, inline=False)
+        embed.add_field(name="Average Power Level", value=str(mean_power_level), inline=False)
+
+        embed.add_field(name="Status", value=status_str)
+        embed.add_field(name="Score", value=SCORE_STR.format(alpha_wins, bravo_wins))
+        embed.set_footer(text="Scrim ID: " + str(lobby_id))
 
         return embed
 
@@ -722,7 +813,7 @@ class Draft(Cog):
         return player_str
 
     @staticmethod
-    def gen_players_remaining_str(players_remaining: list):
+    def gen_players_remaining_str(players_remaining: dict):
         player_str = ""
         if len(players_remaining) == 0:
             return "None"

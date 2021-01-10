@@ -17,11 +17,12 @@ class Help(commands.Cog):
                                  value="To get help for the various parts of " + self.bot.user.name + ", "
                                        "use `l?help [page]` to view any of the pages listed below:\n\n"
                                        "1. Rotation Commands\n"
-                                       "2. Draft Commands\n"
-                                       "3. Leaderboard Commands\n"
-                                       "4. Misc. Commands\n"
-                                       "5. Staff Commands\n"
-                                       "6. Command Syntax Help\n\n"
+                                       "2. Profile Commands\n"
+                                       "3. Draft Commands\n"
+                                       "4. Leaderboard Commands\n"
+                                       "5. Misc. Commands\n"
+                                       "6. Staff Commands\n"
+                                       "7. Command Syntax Help\n\n"
                                        "You can also type `l?help full` "
                                        "if you would like the view the full contents of the help in a DM.",
                                  inline=False)
@@ -36,31 +37,38 @@ class Help(commands.Cog):
         embeds.add_help_embed_field(help_embed, "rotation_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="2", aliases=["Draft"])
+    @help.command(name="2", aliases=["Profile"])
+    async def profile_commands(self, ctx):
+        help_embed = embeds.generate_base_help_embed(self.bot)
+        embeds.add_help_embed_field(help_embed, "profile_commands")
+        await ctx.send(embed=help_embed)
+
+    @help.command(name="3", aliases=["Draft"])
     async def draft_commands(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "draft_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="3", aliases=["Leaderboard"])
+    @help.command(name="4", aliases=["Leaderboard"])
     async def leaderboard_commands(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "leaderboard_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="4", aliases=["Misc"])
+    @help.command(name="5", aliases=["Misc"])
     async def misc_commands(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "misc_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="5", aliases=["Staff"])
+    @help.command(name="6", aliases=["Staff"])
+
     async def staff_commands(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "staff_commands")
         await ctx.send(embed=help_embed)
 
-    @help.command(name="6", aliases=["Command"])
+    @help.command(name="7", aliases=["Command"])
     async def command_syntax(self, ctx):
         help_embed = embeds.generate_base_help_embed(self.bot)
         embeds.add_help_embed_field(help_embed, "command_syntax")

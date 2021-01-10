@@ -14,14 +14,13 @@ class Staff(Cog):
         self.bot = bot
 
     async def cog_check(self, ctx):
-        # TODO make sure you edit this before launch, it disables staff/server675 checks
         # Checks to make sure we're not in a PM and we're not in another server
-        if not ctx.message.guild:  # or ctx.message.guild.id != config.launchpoint_server_id:
+        if not ctx.message.guild or ctx.message.guild.id != config.launchpoint_server_id:
             return False
 
         # Makes sure the person running this command is has the "Staff" role
-        # staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
-        return True  # staff_role in ctx.author.roles
+        staff_role = discord.utils.get(ctx.guild.roles, name="Staff")
+        return staff_role in ctx.author.roles
 
     @commands.group(case_insensitive=True, invoke_without_command=True, aliases=["change", "modify", "staff"])
     async def settings(self, ctx):
@@ -29,8 +28,8 @@ class Staff(Cog):
         embed = discord.Embed(title="Settings Help", color=config.embed_color, description="Alias for command are "
                                                                                            "`change`, `modify`, "
                                                                                            "`staff`, and `settings`.")
-        embed.add_field(name="Map pool", value="The subcommand for mappool is `map-pool`, `map`, or `pool`. If you "
-                                               "don't provide a valid [nkitten.net]("
+        embed.add_field(name="Map pool", value="The subcommand for mappool is `map-pool`, `map`, `maplist`, or `pool`. "
+                                               "If you don't provide a valid [nkitten.net]("
                                                "http://nkitten.net/splatoon2/random/) code as an argument, "
                                                "the bot will print out the current map pool. Otherwise, it will update "
                                                "the current map pool according to the given code and send the updated"
@@ -46,9 +45,10 @@ class Staff(Cog):
 
         await ctx.send(embed=embed)
 
-    @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["map-pool", "map", "pool"])
+    @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["map-pool", "map", "pool", "maplist"])
     async def mappool(self, ctx, *args):
         # if no arguments given, get the current map list from the db
+        await self.init_settings_table(ctx)
         if len(args) == 0:
             map_list = self.bot.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)
             map_list = map_list[0][1]
@@ -144,18 +144,18 @@ class Staff(Cog):
             await ctx.guild.get_channel(config.launchpoint_announcement_id).send(launchpoint_role.mention + " Season " +
                                                                                  str(season_num) + " has started!")
 
-    @commands.command()
-    async def join(self, ctx):
-        # TODO remove debug command
-        guild_id = ctx.guild.id
-        current_time = int(time.time())
-        self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, current_time, 0))
-
     @commands.command(name="tent", aliases=["tenta"])
     async def best_weapon(self, ctx):
         # mako zones best zones
         await ctx.send("https://cdn.discordapp.com/attachments/743901312718209154/791250962798215198/video0.mov")
 
+    async def init_settings_table(self, ctx):
+        # Initializes the settings table
+        guild_id = ctx.guild.id
+        current_time = int(time.time())
+        settings_db = self.bot.db.execute_query(db_strings.GET_SETTINGS, guild_id)
+        if len(settings_db) == 0:
+            self.bot.db.execute_commit_query(db_strings.INSERT_SETTING, (guild_id, "", -1, 0, 0, current_time, 0))
 
 def setup(bot):
     bot.add_cog(Staff(bot))
