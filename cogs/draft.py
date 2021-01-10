@@ -51,8 +51,8 @@ class Draft(Cog):
     @commands.has_role("LaunchPoint")
     async def draft(self, ctx):
         # Ping LaunchPoint members
-        # msg = '{}'.format(LaunchPoint.mention)
-        # await ctx.send('<@&795214612576469022>')
+
+        await ctx.send('<@&795214612576469022> +7')
 
         captains = []
         players = []
