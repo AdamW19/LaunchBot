@@ -65,7 +65,7 @@ class Draft(Cog):
             season_start = datetime.fromtimestamp(settings_db[0][5], tz=pytz.utc)
             season_end = datetime.fromtimestamp(settings_db[0][6], tz=pytz.utc)
             # checks to make sure the season hasn't ended
-            if season_start > datetime.now(pytz.utc) or (
+            if season_start > datetime.now(pytz.utc) and (
                     season_end <= datetime.now(pytz.utc) or settings_db[0][7] == 0):
                 await ctx.send(":x: The current season has ended or is on pause.")
                 return
@@ -476,8 +476,8 @@ class Draft(Cog):
 
                 if str(reaction) == "⛔":
                     await message.clear_reactions()
-                    embed.set_field_at(index=4, name="Status", value="Need a sub, feel free to ping again.. If you want to sub, "
-                                                         "react with `🖐`.\n"
+                    embed.set_field_at(index=4, name="Status", value="Need a sub, feel free to ping again.. "
+                                                                     "If you want to sub, react with `🖐`.\n"
                                                          "Lobby will auto-close in 10 minutes if a sub could not "
                                                          "be found.")
                     await message.add_reaction("🖐")
@@ -496,11 +496,6 @@ class Draft(Cog):
                         embed.clear_fields()
                         await message.clear_reactions()
 
-                        if player in captains:
-                            captains.remove(player)
-
-                            self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, ))
-
                         # remove old player
                         if player in alpha:
                             if player in captains:  # remove captain status in the db
@@ -508,40 +503,44 @@ class Draft(Cog):
                                 self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, team_ids[0], player.id))
                             alpha.remove(player)
                             alpha_subs.append(player)
+                            alpha.append(sub)
+                            alpha_subs.append(sub)
                             self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[0], player.id))
                             self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[0], sub.id, 1, 0))
+
+                            if len(captains) != NUM_CAPTAINS:
+                                if len(alpha) > 1:
+                                    captains.append(alpha[random.randint(0, len(alpha) - 1)])
+                                else:
+                                    captains.append(sub)
                         elif player in bravo:
                             if player in captains:
                                 captains.remove(player)
                                 self.db.execute_commit_query(db_strings.UPDATE_TEAM_CAPTAIN, (0, team_ids[1], player.id))
                             bravo.remove(player)
                             bravo_subs.append(player)
+                            bravo.append(sub)
+                            bravo_subs.append(sub)
                             self.db.execute_commit_query(db_strings.UPDATE_TEAM_SUB, (1, team_ids[1], player.id))
                             self.db.execute_commit_query(db_strings.INSERT_TEAM, (team_ids[1], sub.id, 1, 0))
 
-                        if len(captains) != NUM_CAPTAINS:  # choose a random player to be captain if the captain left
-                            if len(alpha) != LOBBY_SIZE / 2.0:
-                                captains.append(alpha[random.randint(0, len(alpha))])
-                            else:
-                                captains.append(bravo[random.randint(0, len(bravo))])
-
-                        if len(alpha) != LOBBY_SIZE / 2.0:  # regardless just append the new player
-                            alpha.append(sub)
-                        else:
-                            bravo.append(sub)
+                            if len(captains) != NUM_CAPTAINS:
+                                if len(bravo) > 1:
+                                    captains.append(bravo[random.randint(0, len(bravo) - 1)])
+                                else:
+                                    captains.append(sub)
 
                         mean_power_level = 0.0
-                        for seq in (alpha, bravo):  # re-calculate mean power level
-                            for player in seq:
-                                player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)
-                                mean_power_level += player_power
+                        for player in combined_team:
+                            player_power = self.db.execute_query(db_strings.GET_PLAYER, player.id)[0][1]
+                            mean_power_level += player_power
                         mean_power_level = round(mean_power_level / 8.0, 0)
 
-                        embed.set_field_at(index=4, name="Status", value="Thank you for subbing {}! If the captain "
-                                                                         "left, I randomly choose someone in the team "
-                                                                         "to be the captain.\n"
-                                                                         "Returning to the set...".format(sub.mention)
-                                           , inline=False)
+                        embed.add_field(name="Status", value="Thank you for subbing {}! If the captain left, "
+                                                             "I randomly choose someone in the team to be the "
+                                                             "captain.\n"
+                                                             "Returning to the set...".format(sub.mention),
+                                           inline=False)
                         await message.clear_reactions()
                         await message.edit(embed=embed)
 
@@ -549,7 +548,6 @@ class Draft(Cog):
                             await asyncio.sleep(5)
 
                         update_embed = True
-                        continue
 
                     except asyncio.TimeoutError:
                         embed.clear_fields()
