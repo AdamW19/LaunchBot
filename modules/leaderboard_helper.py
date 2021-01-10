@@ -76,7 +76,7 @@ def parse_leaderboard(leaderboard, offset):  # this parses the leaderboard dict 
     return current_leaderboard
 
 
-def gen_leaderboard_embed(leaderboard: list, offset: int, season_num: int):
+def gen_leaderboard_embed(leaderboard: list, offset: int, season_num: int, overwrite_empty: bool):
     position_str = str(offset + 1) + " to " + str(offset + MAIN_LEADERBOARD_LIM)  # Used for title
     title = "Season " + str(season_num) + " Leaderboard -- Positions " + position_str
 
@@ -89,7 +89,7 @@ def gen_leaderboard_embed(leaderboard: list, offset: int, season_num: int):
     players_str, games_str, rank_str = gen_embed_str(offset, current_leaderboard)
 
     # We want to print something, so if there's an error print that no one's reached the leader board yet.
-    if len(current_leaderboard) is not 0:
+    if len(current_leaderboard) is not 0 or overwrite_empty:
         embed.add_field(name="Player", value=players_str)
         embed.add_field(name="Rank", value=games_str)
         embed.add_field(name="Total Games", value=rank_str)

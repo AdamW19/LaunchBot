@@ -15,7 +15,7 @@ class Leaderboard(Cog):
         self.db = self.bot.db
         self.global_lb_mes = None  # the message that contains the global leaderboard
 
-        # self.bot.loop.create_task(self.leaderboard_update())  # TODO remove comment
+        self.bot.loop.create_task(self.leaderboard_update())
 
     async def leaderboard_update(self):
         await self.bot.wait_until_ready()
@@ -28,7 +28,7 @@ class Leaderboard(Cog):
             db_leaderboard = db_settings[3]
 
             leaderboard = self.db.execute_query_no_arg(db_strings.GET_LEADERBOARD)
-            embed = gen_leaderboard_embed(leaderboard, 0, db_curr_season)
+            embed = gen_leaderboard_embed(leaderboard, 0, db_curr_season, False)
 
             # embed is none iff there's no one on the leaderboard
             if embed is not None:
@@ -56,9 +56,17 @@ class Leaderboard(Cog):
         db_settings = self.db.execute_query(db_strings.GET_SETTINGS, config.launchpoint_server_id)[0]
         db_curr_season = db_settings[4]
 
+        if len(leaderboard) == 0:
+            overwrite_empty = False
+        else:
+            overwrite_empty = True
+
         # Makes embeds for pagination, we want 5 10-player sized embeds sorta like the global leaderboard
         for i in range(0, LEADERBOARD_SIZE, MAIN_LEADERBOARD_LIM):
-            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season))
+            embeds.append(gen_leaderboard_embed(leaderboard, i, db_curr_season, overwrite_empty))
+
+            if not overwrite_empty:
+                break
 
         # Sets up pagination, thank you libraries
         paginator = DiscordUtils.Pagination.CustomEmbedPaginator(ctx=ctx, remove_reactions=True, auto_footer=True)

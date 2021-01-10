@@ -29,8 +29,8 @@ class Staff(Cog):
         embed = discord.Embed(title="Settings Help", color=config.embed_color, description="Alias for command are "
                                                                                            "`change`, `modify`, "
                                                                                            "`staff`, and `settings`.")
-        embed.add_field(name="Map pool", value="The subcommand for mappool is `map-pool`, `map`, or `pool`. If you "
-                                               "don't provide a valid [nkitten.net]("
+        embed.add_field(name="Map pool", value="The subcommand for mappool is `map-pool`, `map`, `maplist`, or `pool`. "
+                                               "If you don't provide a valid [nkitten.net]("
                                                "http://nkitten.net/splatoon2/random/) code as an argument, "
                                                "the bot will print out the current map pool. Otherwise, it will update "
                                                "the current map pool according to the given code and send the updated"
@@ -46,7 +46,7 @@ class Staff(Cog):
 
         await ctx.send(embed=embed)
 
-    @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["map-pool", "map", "pool"])
+    @settings.group(case_insensitive=True, invoke_without_command=True, aliases=["map-pool", "map", "pool", "maplist"])
     async def mappool(self, ctx, *args):
         # if no arguments given, get the current map list from the db
         await self.init_settings_table(ctx)

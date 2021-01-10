@@ -9,11 +9,13 @@ import trueskill
 import discord
 from discord.ext import commands
 from discord.ext.commands import Cog
+
+import config
 from modules import code_parser, power_level
 from db.src import db_strings
 
 
-# TODO this whole thing needs more testing and general refactoring
+# TODO this whole thing needs more testing and a metric boatload of refactoring
 
 SERVER_ID = 1234567890
 LAUNCHPOINT_ROLE = 795214612576469022
@@ -22,8 +24,18 @@ LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
 REDO_MAP_MODE_THRESHOLD = int(LOBBY_SIZE / 2)
-BEST_OF = 1  # TODO change back to 7
+BEST_OF = 3
 BEST_OF_THRESHOLD = int(BEST_OF / 2) + 1
+
+LOBBY_START_TIMEOUT = 30 # (60 * 30)  # 30 minutes
+CAPTAIN_VERIF_TIMEOUT = 5 # 15  # 15 sec
+DRAFT_FORMAT_TIMEOUT = 15 # 60  # 60 sec or 1 min
+DRAFT_PLAYER_TIMEOUT = 15 # 20  # 20 sec
+MATCH_TIMEOUT = 10 # (60 * 3)  # 180 sec or 3 min
+SUB_TIMEOUT = 30 # (60 * 10)  # 10 min
+SCORE_REPORT_TIMEOUT = (60 * 60 * 10)  # 10 hours
+
+
 
 EMOTE_TO_INT = {
     "1️⃣": 1,
@@ -109,7 +121,7 @@ class Draft(Cog):
 
                 current_time = datetime.now(pytz.utc)
                 delta = current_time - lobby_curation_time
-                sec_left = (60 * 30) - delta.seconds
+                sec_left = LOBBY_START_TIMEOUT - delta.seconds
 
                 if delta.days < 0:
                     sec_left = 0
@@ -185,8 +197,9 @@ class Draft(Cog):
                     if type(reaction_c.emoji) is str and str(reaction_c) == '⛔':
                         return user_c in captains and user_c.id is not ctx.me.id
                     return False
-                                                                            # TODO change value back to 15
-                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=5.0, check=captain_check)
+
+                reaction, orig_captain = await self.bot.wait_for('reaction_add', timeout=CAPTAIN_VERIF_TIMEOUT,
+                                                                 check=captain_check)
                 embed.set_field_at(index=0, name="Captains", value=self.gen_player_str(captains), inline=False)
                 embed.set_field_at(index=1, name="Captain?", value="Would anyone like to be the captain? React with "
                                                                    "`🖐` to be the captain within the next 15 "
@@ -201,7 +214,8 @@ class Draft(Cog):
                         return user_p in players and user_p not in captains and user_p.id is not ctx.me.id \
                                and str(reaction_p) == "🖐"
 
-                    reaction, new_captain = await self.bot.wait_for('reaction_add', timeout=15.0, check=player_check)
+                    reaction, new_captain = await self.bot.wait_for('reaction_add', timeout=CAPTAIN_VERIF_TIMEOUT,
+                                                                    check=player_check)
 
                     # remove old captain and add them as a player, vice verse for new captain
                     captains.remove(orig_captain)
@@ -304,10 +318,11 @@ class Draft(Cog):
                 curr_captA = True
                 for i in range(len(players)):
                     try:
-                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0, check=lambda x, y: curr_captain_check(x, y, curr_captA))
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=DRAFT_PLAYER_TIMEOUT,
+                                          check=lambda x, y: curr_captain_check(x, y, curr_captA))
 
                     except asyncio.TimeoutError:
-                        num = random.randint(0, len(players_remaining))
+                        num = random.randint(0, len(players_remaining) - 1)
                         keys = players_remaining.keys()
                         reaction = keys[num]
 
@@ -334,12 +349,12 @@ class Draft(Cog):
                 curr_captA = True
                 for i in range(len(players)):
                     try:
-                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=20.0,
+                        reaction, capt = await self.bot.wait_for('reaction_add', timeout=DRAFT_PLAYER_TIMEOUT,
                                                                  check=lambda x, y: curr_captain_check(x, y,
                                                                                                        curr_captA))
 
                     except asyncio.TimeoutError:
-                        num = random.randint(0, len(players_remaining))
+                        num = random.randint(0, len(players_remaining) - 1)
                         keys = players_remaining.keys()
                         reaction = keys[num]
 
@@ -372,7 +387,7 @@ class Draft(Cog):
                 # Time remaining calculations
                 current_time = datetime.now(pytz.utc)
                 delta = current_time - draft_mode_curation
-                sec_left = 15.0 - delta.seconds
+                sec_left = DRAFT_FORMAT_TIMEOUT - delta.seconds
 
                 reaction1, captA = await self.bot.wait_for('reaction_add', timeout=sec_left, check=captain_check)
                 reaction2, captB = await self.bot.wait_for('reaction_add', timeout=sec_left, check=captain_check)
@@ -408,7 +423,6 @@ class Draft(Cog):
                 reactions_not_match = False
 
             else:
-
                 db_settings = self.db.execute_query(db_strings.GET_SETTINGS, ctx.guild.id)[0]
 
                 alpha_team_id = int(db_settings[2])
@@ -417,16 +431,18 @@ class Draft(Cog):
                 self.db.execute_commit_query(db_strings.UPDATE_LAST_SCRIM, ((bravo_team_id + 1), ctx.guild.id))
 
                 for player in alpha:
-                    self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, player.id, 0, 0))
+                    if player in captains:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, captA.id, 0, 0))
+                    else:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, player.id, 0, 1))
                 for player in bravo:
-                    self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, player.id, 0, 0))
+                    if player in captains:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, player.id, 0, 0))
+                    else:
+                        self.db.execute_commit_query(db_strings.INSERT_TEAM, (bravo_team_id, captB.id, 0, 1))
 
-                # add captains into the team, set is_captain to true
-                self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, captA.id, 0, 1))
-                self.db.execute_commit_query(db_strings.INSERT_TEAM, (alpha_team_id, captB.id, 0, 1))
-
-                self.db.execute_commit_query(db_strings.INSERT_SCRIM, (ctx.message.id, alpha_team_id, bravo_team_id, 0, 0))
-
+                self.db.execute_commit_query(db_strings.INSERT_SCRIM, (ctx.message.id, alpha_team_id,
+                                                                       bravo_team_id, 0, 0))
                 # === Match start ===
                 await message.clear_reactions()
                 await self.match(ctx, alpha, bravo, captains, message, [alpha_team_id, bravo_team_id], lobby_id)
@@ -456,7 +472,7 @@ class Draft(Cog):
         bravo_subs = []
 
         map_list = code_parser.parse_code_format(maplist_str)
-        map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
+        map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode
 
         embed = self.gen_match_embed(alpha, bravo, map_mode, mean_power_level, alpha_wins, bravo_wins,
                                      GAME_STATUS.format(total_num_games_played + 1), lobby_id)
@@ -471,12 +487,12 @@ class Draft(Cog):
             try:
                 def set_check(reaction_s, user_s):  # has to be a player/captain and not the bot
                     return (user_s in alpha or user_s in bravo or user_s in captains) and user_s.id is not ctx.me.id
-                                                                    # TODO CHANGE THIS NUMBER
-                reaction, player = await self.bot.wait_for('reaction_add', timeout=10.0, check=set_check)
+
+                reaction, player = await self.bot.wait_for('reaction_add', timeout=MATCH_TIMEOUT, check=set_check)
 
                 if str(reaction) == "⛔":
                     await message.clear_reactions()
-                    embed.set_field_at(index=4, name="Status", value="Need a sub, feel free to ping again.. "
+                    embed.set_field_at(index=4, name="Status", value="We need a sub! "
                                                                      "If you want to sub, react with `🖐`.\n"
                                                          "Lobby will auto-close in 10 minutes if a sub could not "
                                                          "be found.")
@@ -484,13 +500,14 @@ class Draft(Cog):
                     await message.edit(embed=embed)
 
                     try:
+                        total_map_refreshes = 0
                         def sub_check(reaction_sub, user_sub):  # has to be a player not in the lobby, not the bot,
                                                                 # and reacted
                             return user_sub not in alpha and user_sub not in bravo and \
                                    user_sub.id is not ctx.me.id and str(reaction_sub) == "🖐"
 
                         # wait for a sub to react
-                        reaction, sub = await self.bot.wait_for('reaction_add', timeout=(60.0 * 10), check=sub_check)
+                        reaction, sub = await self.bot.wait_for('reaction_add', timeout=SUB_TIMEOUT, check=sub_check)
 
                         # clear fields and reactions
                         embed.clear_fields()
@@ -577,7 +594,7 @@ class Draft(Cog):
                         await message.add_reaction('⛔')  # stop sign
                         await message.add_reaction('\N{ANTICLOCKWISE DOWNWARDS AND UPWARDS OPEN CIRCLE ARROWS}')
 
-                        map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
+                        map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode
                         # map_mode_list = map_mode.split("-")
                         # map_file = FILE_PREFIX + map_mode_list[1].replace(" ", "-") + ".png"
                         embed.set_field_at(index=2, name="Mode + Stage", value=map_mode, inline=False)
@@ -618,7 +635,8 @@ class Draft(Cog):
 
                     while num_players_agree[0] < LOBBY_THRESHOLD and num_players_agree[1] < LOBBY_THRESHOLD and \
                         num_captains_agree[0] < len(captains) and num_captains_agree[1] < len(captains):
-                        reaction, lobby_player = await self.bot.wait_for('reaction_add', timeout=(60.0 * 60 * 10),
+
+                        reaction, lobby_player = await self.bot.wait_for('reaction_add', timeout=SCORE_REPORT_TIMEOUT,
                                                                          check=match_check)
 
                         if str(reaction) == "🇦":
@@ -693,7 +711,7 @@ class Draft(Cog):
                     return  # TODO some error about not choosing a team on time, this shouldn't happen but
 
             if update_embed:
-                map_mode = map_list.pop(random.randint(0, len(map_list)))  # get random map-mode
+                map_mode = map_list.pop(random.randint(0, len(map_list) - 1))  # get random map-mode
                 embed = self.gen_match_embed(alpha, bravo, map_mode, mean_power_level, alpha_wins, bravo_wins,
                                              GAME_STATUS.format(total_num_games_played + 1), lobby_id)
                 await message.clear_reactions()
@@ -734,6 +752,8 @@ class Draft(Cog):
         await message.clear_reactions()
         final_embed = self.send_final_score(alpha, bravo, alpha_subs, bravo_subs, [alpha_wins, bravo_wins],
                                             set_endresult, ctx.message.id)
+
+        await self.bot.get_channel(config.launchpoint_score_id).send(embed=final_embed)
         await message.edit(embed=final_embed)
 
     def send_final_score(self, alpha: list, bravo: list, alpha_subs: list, bravo_subs: list, result: list,

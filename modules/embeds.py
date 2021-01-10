@@ -13,7 +13,8 @@ help_embed_fields = {
         {"title": "Profile Commands",
          "body": "`l?profile` - gets your profile.\n"
                  "`l?profile [discord_name|discord_id]` - gets someone else's profile.\n"
-                 "`l?profile set [fc]` - makes your profile with your Nintendo Switch Friend Code.\n"
+                 "`l?profile set [fc]` - makes a profile or updates your current with your Nintendo Switch "
+                 "Friend Code.\n"
                  "`l?profile delete` - deletes your profile."
          },
     "draft_commands":
