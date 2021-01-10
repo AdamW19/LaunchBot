@@ -42,32 +42,6 @@ class Profiles(commands.Cog):
         else:  # otherwise send the embed
             await ctx.send(embed=embed)
 
-    @profile.command()
-    @commands.check(checks.user_is_developer)
-    async def debug(self, ctx, *args):
-        # TODO remove command once we're in production
-        player_id = args[0]
-        switch = args[1]
-        rank_mu = args[2]
-        rank_sigma = args[3]
-        num_game_win = args[4]
-        num_game_loss = args[5]
-        num_set_win = args[6]
-        num_set_loss = args[7]
-
-        if switch == "new":
-            self.db.execute_commit_query(db_strings.INSERT_PLAYER, (player_id, rank_mu, rank_sigma, num_game_win,
-                                                                    num_game_loss, num_set_win, num_set_loss))
-        elif switch == "update":
-            self.db.execute_commit_query("UPDATE Player SET rank_mu = ?, rank_sigma = ?, num_game_win = ?, "
-                                         "num_game_loss = ?, num_set_win = ?, num_set_loss = ? WHERE player_id = ? ",
-                                         (rank_mu, rank_sigma, num_game_win, num_game_loss, num_set_win,
-                                          num_set_loss, player_id))
-        else:
-            self.db.execute_commit_query("DELETE FROM Player WHERE player_id = ?", player_id)
-
-        await ctx.send("successful")
-
     @profile.command(name="set", aliases=["s"])
     async def set_profile(self, ctx, *args):
         if len(args) == 0:

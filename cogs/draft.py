@@ -19,11 +19,11 @@ from img.stages.test import FILE_PREFIX
 # TODO this whole thing needs more testing and general refactoring
 
 LAUNCHPOINT_ROLE = 732850504463286352
-LOBBY_SIZE = 4
+LOBBY_SIZE = 8
 LOBBY_THRESHOLD = int(LOBBY_SIZE / 2) + 1
 EMOTE_NUM = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"]
 NUM_CAPTAINS = 2
-REDO_MAP_MODE_THRESHOLD = 4
+REDO_MAP_MODE_THRESHOLD = int(LOBBY_SIZE / 2)
 BEST_OF = 7
 
 EMOTE_TO_INT = {
@@ -51,7 +51,8 @@ class Draft(Cog):
     @commands.has_role("LaunchPoint")
     async def draft(self, ctx):
         # Ping LaunchPoint members
-        await ctx.send('<@&732850504463286352> +7')
+        # msg = '{}'.format(LaunchPoint.mention)
+        # await ctx.send('<@&795214612576469022>')
 
         captains = []
         players = []
