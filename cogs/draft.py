@@ -28,9 +28,9 @@ BEST_OF = 7
 BEST_OF_THRESHOLD = int(BEST_OF / 2) + 1
 
 LOBBY_START_TIMEOUT = (60 * 30)  # 30 minutes
-CAPTAIN_VERIF_TIMEOUT = 15  # 15 sec
+CAPTAIN_VERIF_TIMEOUT = 30  # 30 sec
 DRAFT_FORMAT_TIMEOUT = 60  # 60 sec or 1 min
-DRAFT_PLAYER_TIMEOUT = 20  # 20 sec
+DRAFT_PLAYER_TIMEOUT = (60 * 2)  # 120 sec or 2 min
 MATCH_TIMEOUT = (60 * 3)  # 180 sec or 3 min
 SUB_TIMEOUT = (60 * 10)  # 10 min
 SCORE_REPORT_TIMEOUT = (60 * 60 * 10)  # 10 hours
@@ -183,7 +183,7 @@ class Draft(Cog):
         for i in range(3, 0, -1):  # so we only change captains at most 3 times
             embed.clear_fields()
             embed.add_field(name="Captains", value=self.gen_player_str(captains), inline=False)
-            embed.add_field(name="Captain Verification", value="Captains, react with `⛔️` within the next 15 "
+            embed.add_field(name="Captain Verification", value="Captains, react with `⛔️` within the next 30 "
                                                                "seconds if you do not want to be the captain.\n"
                                                                "You can switch captains {} more time(s).".format(i),
                             inline=False)
@@ -340,7 +340,11 @@ class Draft(Cog):
                                        value=captA.mention if curr_captA else captB.mention)
 
                     await message.edit(embed=embed)
-                    await reaction.clear()
+
+                    if isinstance(reaction, str):
+                        await message.clear_reaction(reaction)
+                    else:
+                        await reaction.clear()
 
             async def snake_draft(captA, captB):
                 await start_draft_embed(captA, captB)
