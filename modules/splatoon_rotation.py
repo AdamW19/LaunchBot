@@ -103,6 +103,8 @@ class SplatoonRotation:
                         else:
                             self.weapons_array.add(weapon["weapon"]["name"] + SR_TERM_CHAR + weapon["id"])
                     return True
+        if self.mode_type is ModeTypes.SALMON:  # if we failed, we wanna set the next rotation info
+            self.next_rotation = datetime.fromtimestamp(data[0]["start_time"], self.target_time.tzname())
         return False
 
     @staticmethod
